@@ -2,18 +2,16 @@
 
 namespace App\Services\Monitoring;
 
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Persistent STOMP metrics collector using Redis
+ * Persistent STOMP metrics collector using Database
  * 
  * Provides atomic counters that persist across PHP processes
  */
 class StompMetricsCollector
 {
-    private const PREFIX = 'stomp:metrics:';
-    
     private const COUNTERS = [
         'connections_total',
         'connections_active',
@@ -30,7 +28,7 @@ class StompMetricsCollector
     ];
 
     /**
-     * Increment a counter atomically
+     * Increment a counter atomically using database
      */
     public static function increment(string $counter, int $amount = 1): int
     {
@@ -39,8 +37,14 @@ class StompMetricsCollector
         }
 
         try {
-            $key = self::PREFIX . $counter;
-            return Redis::incrby($key, $amount);
+            DB::table('stomp_counters')
+                ->where('counter_name', $counter)
+                ->update([
+                    'value' => DB::raw("value + {$amount}"),
+                    'updated_at' => now(),
+                ]);
+            
+            return self::get($counter);
         } catch (\Exception $e) {
             Log::error("Failed to increment STOMP counter", [
                 'counter' => $counter,
@@ -68,9 +72,11 @@ class StompMetricsCollector
         }
 
         try {
-            $key = self::PREFIX . $counter;
-            $value = Redis::get($key);
-            return (int) ($value ?? 0);
+            $result = DB::table('stomp_counters')
+                ->where('counter_name', $counter)
+                ->value('value');
+            
+            return (int) ($result ?? 0);
         } catch (\Exception $e) {
             Log::error("Failed to get STOMP counter", [
                 'counter' => $counter,
@@ -104,8 +110,9 @@ class StompMetricsCollector
         }
 
         try {
-            $key = self::PREFIX . $counter;
-            Redis::del($key);
+            DB::table('stomp_counters')
+                ->where('counter_name', $counter)
+                ->update(['value' => 0, 'updated_at' => now()]);
         } catch (\Exception $e) {
             Log::error("Failed to reset STOMP counter", [
                 'counter' => $counter,
@@ -125,17 +132,30 @@ class StompMetricsCollector
     }
 
     /**
-     * Record timing metric
+     * Record timing metric (stored in cache table)
      */
     public static function recordTiming(string $metric, float $milliseconds): void
     {
         try {
-            $key = self::PREFIX . "timing:{$metric}";
+            // Store in cache table with 1 hour TTL
+            $key = "stomp_timing_{$metric}";
+            $existing = DB::table('cache')->where('key', $key)->value('value');
             
-            // Store last 100 timings for average calculation
-            Redis::lpush($key, $milliseconds);
-            Redis::ltrim($key, 0, 99);
-            Redis::expire($key, 3600); // 1 hour TTL
+            $timings = $existing ? json_decode($existing, true) : [];
+            $timings[] = $milliseconds;
+            
+            // Keep last 100 timings
+            if (count($timings) > 100) {
+                $timings = array_slice($timings, -100);
+            }
+            
+            DB::table('cache')->updateOrInsert(
+                ['key' => $key],
+                [
+                    'value' => json_encode($timings),
+                    'expiration' => now()->addHour()->timestamp,
+                ]
+            );
         } catch (\Exception $e) {
             Log::error("Failed to record STOMP timing", [
                 'metric' => $metric,
@@ -150,9 +170,14 @@ class StompMetricsCollector
     public static function getAverageTiming(string $metric): float
     {
         try {
-            $key = self::PREFIX . "timing:{$metric}";
-            $timings = Redis::lrange($key, 0, -1);
+            $key = "stomp_timing_{$metric}";
+            $value = DB::table('cache')->where('key', $key)->value('value');
             
+            if (!$value) {
+                return 0.0;
+            }
+
+            $timings = json_decode($value, true);
             if (empty($timings)) {
                 return 0.0;
             }
