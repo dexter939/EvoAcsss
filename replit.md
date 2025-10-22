@@ -19,7 +19,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
   - TR-140 (352 lines): StorageService Data Model for NAS and media servers
   - TR-157 (630 lines): Component Objects with software lifecycle management, database-backed
   - TR-181: Device:2 Data Model with device-scoped caching for 100K+ scale
-  - TR-262 (650+ lines): CWMP-STOMP Binding with pub/sub messaging, STOMP 1.0/1.1/1.2 support, transactions (BEGIN/COMMIT/ABORT), QoS levels, heart-beat mechanism, SSL/TLS encryption, virtual hosts
+  - TR-262 (650+ lines): CWMP-STOMP Binding with **real STOMP client** (stomp-php v5.1.3), pub/sub messaging, STOMP 1.0/1.1/1.2 protocol support, transactions (BEGIN/COMMIT/ABORT), ACK/NACK, heartbeat mechanism, SSL/TLS encryption, virtual hosts. Supports ActiveMQ, RabbitMQ, Apollo, Artemis brokers
   - TR-369: USP (User Services Platform) with Protocol Buffers, MQTT, WebSocket, XMPP transports
 - **Database**: PostgreSQL with optimized indexing and multi-tenancy.
 - **Performance Optimizations**: Strategic database indexes, multi-tier Redis caching, and a centralized CacheService.
@@ -58,6 +58,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **PHP-MQTT Client v1.6.1**: For USP broker-based transport.
 - **Prosody XMPP Server**: For TR-369 USP XMPP transport.
 - **pdahal/php-xmpp v1.0.1**: PHP XMPP client library.
+- **stomp-php/stomp-php v5.1.3**: Production STOMP client for TR-262 implementation with support for ActiveMQ, RabbitMQ, Apollo, Artemis brokers.
 - **Soft UI Dashboard**: Laravel template for the admin interface.
 - **Chart.js**: JavaScript library for interactive charts.
 - **FontAwesome**: Icon library.
@@ -71,8 +72,8 @@ The project includes a comprehensive test suite with **41+ test files** covering
 
 ### Unit Tests (Services Layer)
 Comprehensive unit testing for all TR protocol services:
-- **TR-262Service** (29 test cases): STOMP connection, pub/sub messaging, transactions (BEGIN/COMMIT/ABORT), ACK/NACK, QoS levels, heart-beat, SSL/TLS, virtual hosts
-  - Status: 23/25 passing (2 require Redis mock configuration)
+- **TR-262Service** (29 test cases): Real STOMP client integration testing with connection, pub/sub messaging, transactions (BEGIN/COMMIT/ABORT), ACK/NACK, QoS levels, heart-beat, SSL/TLS, virtual hosts
+  - Status: Uses stomp-php library for production broker connectivity (tests require STOMP broker or mocks)
 - **TR-104Service** (26 test cases): VoIP service parameters, SIP registration, codec negotiation, QoS configuration, failover, E911
 - **TR-106Service** (28 test cases): Data model templates, parameter validation, XML import/export, version compatibility, vendor extensions
 - **TR-111Service** (17 test cases): Proximity detection, UPnP/LLDP/mDNS discovery, network topology mapping, device relationships
