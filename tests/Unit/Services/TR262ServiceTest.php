@@ -7,6 +7,20 @@ use App\Services\TR262Service;
 use App\Models\CpeDevice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
+/**
+ * TR-262 STOMP Service Tests
+ * 
+ * IMPORTANT: These tests use the real stomp-php library which requires:
+ * 1. A running STOMP broker (ActiveMQ, RabbitMQ, Apollo, Artemis) on localhost:61613
+ * 2. OR mock the \Stomp\Client and \Stomp\SimpleStomp classes for unit testing
+ * 
+ * Tests will fail with connection errors if no broker is available.
+ * For CI/CD, consider using Docker to spin up a test broker or mock the STOMP classes.
+ * 
+ * Example broker setup:
+ * - RabbitMQ with STOMP plugin: rabbitmq-plugins enable rabbitmq_stomp
+ * - ActiveMQ: docker run -p 61613:61613 rmohr/activemq
+ */
 class TR262ServiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -146,36 +160,34 @@ class TR262ServiceTest extends TestCase
         $this->assertEquals($subscriptionId, $unsubscribeResult['subscription_id']);
     }
 
-    public function test_ack_acknowledges_message(): void
+    public function test_ack_requires_stored_frame(): void
     {
         $config = ['host' => 'localhost', 'port' => 61613];
         $result = $this->service->connect($this->device, $config);
         $connectionId = $result['connection_id'];
         
-        $subscribeResult = $this->service->subscribe($connectionId, '/topic/test', ['ack' => 'client']);
-        $subscriptionId = $subscribeResult['subscription_id'];
+        $this->service->subscribe($connectionId, '/topic/test', ['ack' => 'client']);
 
-        $ackResult = $this->service->ack('msg_12345', $subscriptionId);
-
-        $this->assertEquals('success', $ackResult['status']);
-        $this->assertEquals('msg_12345', $ackResult['message_id']);
-        $this->assertArrayHasKey('acknowledged_at', $ackResult);
+        // Attempting to ACK without reading frame first should throw exception
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Message frame not found');
+        
+        $this->service->ack('msg_12345', $connectionId);
     }
 
-    public function test_nack_rejects_message(): void
+    public function test_nack_requires_stored_frame(): void
     {
         $config = ['host' => 'localhost', 'port' => 61613];
         $result = $this->service->connect($this->device, $config);
         $connectionId = $result['connection_id'];
         
-        $subscribeResult = $this->service->subscribe($connectionId, '/topic/test', ['ack' => 'client']);
-        $subscriptionId = $subscribeResult['subscription_id'];
+        $this->service->subscribe($connectionId, '/topic/test', ['ack' => 'client']);
 
-        $nackResult = $this->service->nack('msg_12345', $subscriptionId);
-
-        $this->assertEquals('success', $nackResult['status']);
-        $this->assertEquals('msg_12345', $nackResult['message_id']);
-        $this->assertArrayHasKey('rejected_at', $nackResult);
+        // Attempting to NACK without reading frame first should throw exception
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Message frame not found');
+        
+        $this->service->nack('msg_12345', $connectionId);
     }
 
     public function test_begin_transaction_creates_transaction(): void

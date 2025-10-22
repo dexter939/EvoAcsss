@@ -312,21 +312,50 @@ class TR262Service
     }
 
     /**
-     * Acknowledge message receipt (for client/client-individual ack modes)
+     * Message frame storage for ACK/NACK operations
+     * @var array<string, \Stomp\Transport\Frame>
      */
-    public function ack(string $messageId, string $subscriptionId): array
+    private array $messageFrames = [];
+
+    /**
+     * Store received frame for later ACK/NACK
+     */
+    private function storeFrame(\Stomp\Transport\Frame $frame): string
     {
-        if (!isset($this->subscriptions[$subscriptionId])) {
-            throw new \InvalidArgumentException("Invalid subscription ID: {$subscriptionId}");
+        $messageId = $frame->getHeader('message-id') ?? uniqid('msg_', true);
+        $this->messageFrames[$messageId] = $frame;
+        return $messageId;
+    }
+
+    /**
+     * Acknowledge message receipt (for client/client-individual ack modes)
+     * 
+     * @param string $messageId The message ID from readFrame() or subscribe callback
+     * @param string $connectionId The connection ID that received the message
+     */
+    public function ack(string $messageId, string $connectionId): array
+    {
+        if (!isset($this->stompClients[$connectionId])) {
+            throw new \InvalidArgumentException("Invalid connection ID: {$connectionId}");
+        }
+
+        if (!isset($this->messageFrames[$messageId])) {
+            throw new \InvalidArgumentException("Message frame not found. Call readFrame() first.");
         }
 
         try {
-            // Note: In real usage, you'd receive a Frame from readFrame()
-            // and pass it to ack(). This is a simplified interface.
+            $frame = $this->messageFrames[$messageId];
+            $stomp = $this->stompClients[$connectionId];
+            
+            // Send ACK frame to broker
+            $stomp->ack($frame);
+            
+            // Clean up stored frame
+            unset($this->messageFrames[$messageId]);
             
             Log::info("STOMP message acknowledged", [
                 'message_id' => $messageId,
-                'subscription_id' => $subscriptionId,
+                'connection_id' => $connectionId,
             ]);
 
             return [
@@ -335,7 +364,7 @@ class TR262Service
                 'acknowledged_at' => now()->toIso8601String(),
             ];
 
-        } catch (\Exception $e) {
+        } catch (StompException $e) {
             Log::error("STOMP ack failed", [
                 'message_id' => $messageId,
                 'error' => $e->getMessage(),
@@ -350,19 +379,33 @@ class TR262Service
 
     /**
      * Negative acknowledge (reject message)
+     * 
+     * @param string $messageId The message ID from readFrame() or subscribe callback
+     * @param string $connectionId The connection ID that received the message
      */
-    public function nack(string $messageId, string $subscriptionId): array
+    public function nack(string $messageId, string $connectionId): array
     {
-        if (!isset($this->subscriptions[$subscriptionId])) {
-            throw new \InvalidArgumentException("Invalid subscription ID: {$subscriptionId}");
+        if (!isset($this->stompClients[$connectionId])) {
+            throw new \InvalidArgumentException("Invalid connection ID: {$connectionId}");
+        }
+
+        if (!isset($this->messageFrames[$messageId])) {
+            throw new \InvalidArgumentException("Message frame not found. Call readFrame() first.");
         }
 
         try {
-            // Note: Similar to ack(), in real usage you'd use the Frame object
+            $frame = $this->messageFrames[$messageId];
+            $stomp = $this->stompClients[$connectionId];
+            
+            // Send NACK frame to broker
+            $stomp->nack($frame);
+            
+            // Clean up stored frame
+            unset($this->messageFrames[$messageId]);
             
             Log::info("STOMP message rejected", [
                 'message_id' => $messageId,
-                'subscription_id' => $subscriptionId,
+                'connection_id' => $connectionId,
             ]);
 
             return [
@@ -371,7 +414,7 @@ class TR262Service
                 'rejected_at' => now()->toIso8601String(),
             ];
 
-        } catch (\Exception $e) {
+        } catch (StompException $e) {
             Log::error("STOMP nack failed", [
                 'message_id' => $messageId,
                 'error' => $e->getMessage(),
@@ -632,9 +675,11 @@ class TR262Service
     }
 
     /**
-     * Read incoming frame from connection
+     * Read incoming frame from connection and store it for ACK/NACK
+     * 
+     * @return array|null Returns message data or null if no frame available
      */
-    public function readFrame(string $connectionId)
+    public function readFrame(string $connectionId): ?array
     {
         if (!isset($this->clients[$connectionId])) {
             throw new \InvalidArgumentException("Invalid connection ID: {$connectionId}");
@@ -642,7 +687,37 @@ class TR262Service
 
         try {
             $client = $this->clients[$connectionId];
-            return $client->readFrame();
+            $frame = $client->readFrame();
+            
+            if (!$frame) {
+                return null;
+            }
+
+            // Store frame for potential ACK/NACK
+            $messageId = $this->storeFrame($frame);
+            
+            // Extract subscription ID from frame headers
+            $subscriptionId = $frame->getHeader('subscription');
+            if ($subscriptionId && isset($this->subscriptions[$subscriptionId])) {
+                $this->subscriptions[$subscriptionId]['message_count']++;
+            }
+
+            Log::info("STOMP frame received", [
+                'connection_id' => $connectionId,
+                'message_id' => $messageId,
+                'subscription' => $subscriptionId,
+                'command' => $frame->getCommand(),
+            ]);
+
+            return [
+                'message_id' => $messageId,
+                'subscription_id' => $subscriptionId,
+                'command' => $frame->getCommand(),
+                'headers' => $frame->getHeaders(),
+                'body' => $frame->getBody(),
+                'received_at' => now()->toIso8601String(),
+            ];
+
         } catch (StompException $e) {
             Log::error("Failed to read STOMP frame", [
                 'connection_id' => $connectionId,
