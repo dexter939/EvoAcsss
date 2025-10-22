@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'), // Force database for production
+    'driver' => 'database', // Forced to database for Replit environment
 
     /*
     |--------------------------------------------------------------------------
