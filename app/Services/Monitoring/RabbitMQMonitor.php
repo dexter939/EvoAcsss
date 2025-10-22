@@ -73,12 +73,20 @@ class RabbitMQMonitor
 
     /**
      * Get all queues
+     * 
+     * Safe method - catches exceptions and returns empty array
      */
     public function getQueues(): array
     {
         try {
             $response = $this->client->get('/queues');
             return json_decode($response->getBody()->getContents(), true) ?? [];
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            \App\Services\Monitoring\StompMetricsCollector::increment('errors_broker_unavailable');
+            Log::error("Failed to get RabbitMQ queues - broker unavailable", [
+                'error' => $e->getMessage(),
+            ]);
+            return [];
         } catch (\Exception $e) {
             Log::error("Failed to get RabbitMQ queues", [
                 'error' => $e->getMessage(),
@@ -89,39 +97,43 @@ class RabbitMQMonitor
 
     /**
      * Get overview statistics
+     * 
+     * @throws \GuzzleHttp\Exception\ConnectException
+     * @throws \GuzzleHttp\Exception\RequestException
      */
     public function getOverview(): array
     {
-        try {
-            $response = $this->client->get('/overview');
-            $data = json_decode($response->getBody()->getContents(), true);
-            
-            return [
-                'connections' => $data['object_totals']['connections'] ?? 0,
-                'channels' => $data['object_totals']['channels'] ?? 0,
-                'queues' => $data['object_totals']['queues'] ?? 0,
-                'consumers' => $data['object_totals']['consumers'] ?? 0,
-                'messages' => $data['queue_totals']['messages'] ?? 0,
-                'messages_ready' => $data['queue_totals']['messages_ready'] ?? 0,
-                'messages_unacknowledged' => $data['queue_totals']['messages_unacknowledged'] ?? 0,
-                'message_stats' => $data['message_stats'] ?? [],
-            ];
-        } catch (\Exception $e) {
-            Log::error("Failed to get RabbitMQ overview", [
-                'error' => $e->getMessage(),
-            ]);
-            return [];
-        }
+        $response = $this->client->get('/overview');
+        $data = json_decode($response->getBody()->getContents(), true);
+        
+        return [
+            'connections' => $data['object_totals']['connections'] ?? 0,
+            'channels' => $data['object_totals']['channels'] ?? 0,
+            'queues' => $data['object_totals']['queues'] ?? 0,
+            'consumers' => $data['object_totals']['consumers'] ?? 0,
+            'messages' => $data['queue_totals']['messages'] ?? 0,
+            'messages_ready' => $data['queue_totals']['messages_ready'] ?? 0,
+            'messages_unacknowledged' => $data['queue_totals']['messages_unacknowledged'] ?? 0,
+            'message_stats' => $data['message_stats'] ?? [],
+        ];
     }
 
     /**
      * Get node information
+     * 
+     * Safe method - catches exceptions and returns empty array
      */
     public function getNodes(): array
     {
         try {
             $response = $this->client->get('/nodes');
             return json_decode($response->getBody()->getContents(), true) ?? [];
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            \App\Services\Monitoring\StompMetricsCollector::increment('errors_broker_unavailable');
+            Log::error("Failed to get RabbitMQ nodes - broker unavailable", [
+                'error' => $e->getMessage(),
+            ]);
+            return [];
         } catch (\Exception $e) {
             Log::error("Failed to get RabbitMQ nodes", [
                 'error' => $e->getMessage(),
@@ -168,6 +180,8 @@ class RabbitMQMonitor
 
     /**
      * Get message rates (msg/sec)
+     * 
+     * Safe method - catches exceptions and returns zeros
      */
     public function getMessageRates(): array
     {
@@ -194,10 +208,26 @@ class RabbitMQMonitor
 
     /**
      * Get comprehensive broker statistics
+     * 
+     * Safe method - handles broker unavailability gracefully
      */
     public function getBrokerStats(): array
     {
-        $overview = $this->getOverview();
+        try {
+            $overview = $this->getOverview();
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            StompMetricsCollector::increment('errors_broker_unavailable');
+            Log::warning("getBrokerStats - broker unavailable", [
+                'error' => $e->getMessage(),
+            ]);
+            $overview = [];
+        } catch (\Exception $e) {
+            Log::error("getBrokerStats - overview failed", [
+                'error' => $e->getMessage(),
+            ]);
+            $overview = [];
+        }
+        
         $nodes = $this->getNodes();
         $rates = $this->getMessageRates();
         

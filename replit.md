@@ -56,8 +56,8 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Queue Worker Fixed**: Created cache tables (cache, cache_locks) resolving Queue Worker startup failures
 - **STOMP Test Infrastructure**: Comprehensive testing guide (`docs/TR262_STOMP_Testing_Setup.md`) with Docker setup for RabbitMQ, ActiveMQ, Apollo, Artemis brokers, CI/CD integration examples (GitHub Actions, GitLab CI), and load testing scripts
 - **STOMP Monitoring Production-Ready**: Carrier-grade monitoring system with:
-  - **Database-Backed Atomic Counters** (`stomp_counters` table): 12 persistent counters across all PHP processes
-  - **Historical Metrics** (`stomp_metrics` table): Time-series snapshots with 30-day retention
+  - **Database-Backed Atomic Counters** (`stomp_counters` table): 14 persistent counters across all PHP processes (including broker health tracking)
+  - **Historical Metrics** (`stomp_metrics` table): Time-series snapshots with 30-day automated retention
   - **RabbitMQ Management API Integration** (`RabbitMQMonitor` service): Real broker introspection (connections, queues, rates, node health)
   - **Background Polling Job** (`PollBrokerMetrics`): Scheduled every minute, merges local counters + broker stats
   - **Latency Tracking**: Microsecond-precision timing for publish/ACK operations stored in cache table
@@ -65,6 +65,9 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
   - **REST API Endpoints**: Time-windowed aggregations (5m/1h/24h) via `/api/v1/stomp/metrics`, `/api/v1/stomp/connections`, `/api/v1/stomp/throughput`, `/api/v1/stomp/broker-health`
   - **StompMetricsController**: Time-series queries, rate calculations (msg/sec), latency averages
   - **Fallback Strategy**: Gracefully handles broker unavailability, uses local metrics only
+  - **Retention Enforcement**: Automated cleanup job (`PruneStompMetrics`) scheduled daily at 2:00 AM, purges metrics older than 30 days
+  - **Enhanced Telemetry**: Dedicated error tracking for broker unavailability (`errors_broker_unavailable`) and timeouts (`errors_broker_timeout`)
+  - **Test Coverage**: Comprehensive test suite with 21 test cases for `StompMetricsCollector` and `TR262Service` metrics integration
 - **Performance Optimization**: Cached routes, configuration, and views for production deployment
 - **Deployment Verified**: VM deployment with build.sh (migrations, caching) and run.sh (multi-service orchestration) scripts fully functional
 
@@ -136,15 +139,20 @@ php artisan test --testsuite=Integration
 # Run TR protocol tests
 php artisan test --filter=TR262ServiceTest
 php artisan test --filter=TR104ServiceTest
+
+# Run STOMP monitoring tests
+php artisan test --filter=StompMetricsCollectorTest
+php artisan test --filter=RabbitMQMonitorTest
 ```
 
 ### Coverage Status
 - **Service Layer**: Comprehensive coverage of all TR protocol services
+- **Monitoring Layer**: 27 test cases for STOMP metrics (21 StompMetrics + 6 RabbitMQMonitor) with 24 assertions
 - **Controllers**: API endpoint testing for device management and provisioning
 - **Models**: Factory-based testing with realistic data generation
 - **Target**: 70-80% code coverage for core functionality
 
-### Known Test Requirements
-- Redis mock configuration for STOMP queue testing
-- Database refresh for integration tests
-- Factory relationships properly configured
+### Recent Test Additions (October 2025)
+- **StompMetricsCollectorTest** (10 cases): Counter increments, persistence, timing metrics, atomic operations
+- **TR262ServiceMetricsTest** (11 cases): Message lifecycle, transactions, error tracking
+- **RabbitMQMonitorTest** (6 cases): Broker unavailability handling, safe fallbacks, counter validation
