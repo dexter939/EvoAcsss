@@ -33,6 +33,8 @@ class StompMetric extends Model
         'errors_publish',
         'errors_subscribe',
         'errors_timeout',
+        'errors_broker_unavailable',
+        'errors_broker_timeout',
         'broker_stats',
     ];
 

@@ -33,6 +33,8 @@ return new class extends Migration
             'errors_connection',
             'errors_publish',
             'errors_subscribe',
+            'errors_broker_unavailable',
+            'errors_broker_timeout',
         ];
 
         foreach ($counters as $counter) {

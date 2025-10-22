@@ -47,6 +47,8 @@ return new class extends Migration
             $table->integer('errors_publish')->default(0);
             $table->integer('errors_subscribe')->default(0);
             $table->integer('errors_timeout')->default(0);
+            $table->integer('errors_broker_unavailable')->default(0);
+            $table->integer('errors_broker_timeout')->default(0);
             
             // Broker info (JSON for flexibility)
             $table->json('broker_stats')->nullable();

@@ -48,6 +48,12 @@ class RabbitMQMonitor
         try {
             $response = $this->client->get('/connections');
             return json_decode($response->getBody()->getContents(), true) ?? [];
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            \App\Services\Monitoring\StompMetricsCollector::increment('errors_broker_unavailable');
+            Log::error("Failed to get RabbitMQ connections - broker unavailable", [
+                'error' => $e->getMessage(),
+            ]);
+            return [];
         } catch (\Exception $e) {
             Log::error("Failed to get RabbitMQ connections", [
                 'error' => $e->getMessage(),
@@ -132,7 +138,30 @@ class RabbitMQMonitor
         try {
             $overview = $this->getOverview();
             return !empty($overview);
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            // Connection refused or network unreachable
+            \App\Services\Monitoring\StompMetricsCollector::increment('errors_broker_unavailable');
+            Log::warning("RabbitMQ broker unavailable", [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            // Timeout or HTTP error
+            if ($e->getCode() === CURLE_OPERATION_TIMEDOUT) {
+                \App\Services\Monitoring\StompMetricsCollector::increment('errors_broker_timeout');
+            } else {
+                \App\Services\Monitoring\StompMetricsCollector::increment('errors_broker_unavailable');
+            }
+            Log::warning("RabbitMQ broker error", [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+            ]);
+            return false;
         } catch (\Exception $e) {
+            \App\Services\Monitoring\StompMetricsCollector::increment('errors_broker_unavailable');
+            Log::error("RabbitMQ health check failed", [
+                'error' => $e->getMessage(),
+            ]);
             return false;
         }
     }

@@ -23,3 +23,8 @@ Schedule::command('system:check-updates --auto-stage')
 Schedule::command('stomp:poll-broker')
     ->everyMinute()
     ->withoutOverlapping();
+
+// STOMP metrics retention cleanup (daily at 2:00 AM)
+Schedule::command('stomp:prune-metrics')
+    ->dailyAt('02:00')
+    ->withoutOverlapping();

@@ -25,6 +25,8 @@ class StompMetricsCollector
         'errors_connection',
         'errors_publish',
         'errors_subscribe',
+        'errors_broker_unavailable',
+        'errors_broker_timeout',
     ];
 
     /**

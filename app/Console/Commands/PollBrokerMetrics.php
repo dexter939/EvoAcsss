@@ -92,6 +92,8 @@ class PollBrokerMetrics extends Command
             'errors_publish' => $localStats['errors_publish'] ?? 0,
             'errors_subscribe' => $localStats['errors_subscribe'] ?? 0,
             'errors_timeout' => 0,
+            'errors_broker_unavailable' => $localStats['errors_broker_unavailable'] ?? 0,
+            'errors_broker_timeout' => $localStats['errors_broker_timeout'] ?? 0,
             
             // Broker statistics (JSON)
             'broker_stats' => [
@@ -150,9 +152,19 @@ class PollBrokerMetrics extends Command
             'errors_publish' => $localStats['errors_publish'] ?? 0,
             'errors_subscribe' => $localStats['errors_subscribe'] ?? 0,
             'errors_timeout' => 0,
+            'errors_broker_unavailable' => $localStats['errors_broker_unavailable'] ?? 0,
+            'errors_broker_timeout' => $localStats['errors_broker_timeout'] ?? 0,
             'broker_stats' => null,
         ]);
 
         $this->info('Local metrics collected (broker unavailable)');
+        $this->table(
+            ['Error Type', 'Count'],
+            [
+                ['Broker Unavailable', $localStats['errors_broker_unavailable'] ?? 0],
+                ['Broker Timeout', $localStats['errors_broker_timeout'] ?? 0],
+                ['Connection Errors', $localStats['errors_connection'] ?? 0],
+            ]
+        );
     }
 }
