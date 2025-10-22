@@ -18,3 +18,8 @@ Schedule::command('system:check-updates --auto-stage')
     ->at('03:00')
     ->withoutOverlapping()
     ->onOneServer();
+
+// STOMP broker metrics polling (every minute)
+Schedule::command('stomp:poll-broker')
+    ->everyMinute()
+    ->withoutOverlapping();

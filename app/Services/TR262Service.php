@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CpeDevice;
+use App\Services\Monitoring\StompMetricsCollector;
 use Illuminate\Support\Facades\Log;
 use Stomp\Client;
 use Stomp\SimpleStomp;
@@ -126,9 +127,9 @@ class TR262Service
             $client->connect();
             $sessionId = $client->getSessionId() ?: uniqid('session_', true);
 
-            // Update stats
-            self::incrementStat('connections_total');
-            self::incrementStat('connections_active');
+            // Update stats (Redis-persisted)
+            StompMetricsCollector::increment('connections_total');
+            StompMetricsCollector::increment('connections_active');
 
             // Store client and connection info
             $this->clients[$connectionId] = $client;
@@ -160,7 +161,7 @@ class TR262Service
             ];
 
         } catch (StompException $e) {
-            self::incrementStat('errors_connection');
+            StompMetricsCollector::increment('errors_connection');
             
             Log::error("STOMP connection failed", [
                 'device_id' => $device->id,
@@ -187,9 +188,12 @@ class TR262Service
             $stomp = $this->stompClients[$connectionId];
             $messageObj = new Message($message, $headers);
             
+            $startTime = microtime(true);
             $stomp->send($destination, $messageObj);
+            $latency = (microtime(true) - $startTime) * 1000; // Convert to ms
             
-            self::incrementStat('messages_published');
+            StompMetricsCollector::increment('messages_published');
+            StompMetricsCollector::recordTiming('publish', $latency);
             
             $messageId = uniqid('msg_', true);
 
@@ -209,7 +213,7 @@ class TR262Service
             ];
 
         } catch (StompException $e) {
-            self::incrementStat('errors_publish');
+            StompMetricsCollector::increment('errors_publish');
             
             Log::error("STOMP publish failed", [
                 'connection_id' => $connectionId,
@@ -358,9 +362,12 @@ class TR262Service
             $stomp = $this->stompClients[$connectionId];
             
             // Send ACK frame to broker
+            $startTime = microtime(true);
             $stomp->ack($frame);
+            $latency = (microtime(true) - $startTime) * 1000;
             
-            self::incrementStat('messages_acked');
+            StompMetricsCollector::increment('messages_acked');
+            StompMetricsCollector::recordTiming('ack', $latency);
             
             // Clean up stored frame
             unset($this->messageFrames[$messageId]);
@@ -412,7 +419,7 @@ class TR262Service
             // Send NACK frame to broker
             $stomp->nack($frame);
             
-            self::incrementStat('messages_nacked');
+            StompMetricsCollector::increment('messages_nacked');
             
             // Clean up stored frame
             unset($this->messageFrames[$messageId]);
@@ -456,7 +463,7 @@ class TR262Service
             $stomp = $this->stompClients[$connectionId];
             $stomp->begin($transactionId);
             
-            self::incrementStat('transactions_begun');
+            StompMetricsCollector::increment('transactions_begun');
 
             Log::info("STOMP transaction started", [
                 'connection_id' => $connectionId,
@@ -494,7 +501,7 @@ class TR262Service
                 try {
                     $stomp->commit($transactionId);
                     
-                    self::incrementStat('transactions_committed');
+                    StompMetricsCollector::increment('transactions_committed');
                     
                     Log::info("STOMP transaction committed", [
                         'connection_id' => $connectionId,
@@ -537,7 +544,7 @@ class TR262Service
                 try {
                     $stomp->abort($transactionId);
                     
-                    self::incrementStat('transactions_aborted');
+                    StompMetricsCollector::increment('transactions_aborted');
                     
                     Log::info("STOMP transaction aborted", [
                         'connection_id' => $connectionId,
@@ -585,7 +592,7 @@ class TR262Service
             // Disconnect from broker
             $client->disconnect();
             
-            self::incrementStat('connections_active', -1);
+            StompMetricsCollector::decrement('connections_active');
 
             // Remove all subscriptions for this connection
             foreach ($this->subscriptions as $subId => $sub) {
@@ -660,25 +667,6 @@ class TR262Service
     }
 
     /**
-     * Statistics tracking
-     * @var array
-     */
-    private static array $stats = [
-        'connections_total' => 0,
-        'connections_active' => 0,
-        'messages_published' => 0,
-        'messages_received' => 0,
-        'messages_acked' => 0,
-        'messages_nacked' => 0,
-        'transactions_begun' => 0,
-        'transactions_committed' => 0,
-        'transactions_aborted' => 0,
-        'errors_connection' => 0,
-        'errors_publish' => 0,
-        'errors_subscribe' => 0,
-    ];
-
-    /**
      * Get connection statistics
      */
     public function getConnectionStats(string $connectionId): array
@@ -724,21 +712,11 @@ class TR262Service
     }
 
     /**
-     * Get global statistics
+     * Get global statistics from Redis
      */
     public static function getGlobalStats(): array
     {
-        return self::$stats;
-    }
-
-    /**
-     * Increment stat counter
-     */
-    private static function incrementStat(string $key, int $amount = 1): void
-    {
-        if (isset(self::$stats[$key])) {
-            self::$stats[$key] += $amount;
-        }
+        return StompMetricsCollector::getAll();
     }
 
     /**
@@ -771,7 +749,7 @@ class TR262Service
             // Store frame for potential ACK/NACK
             $messageId = $this->storeFrame($frame);
             
-            self::incrementStat('messages_received');
+            StompMetricsCollector::increment('messages_received');
             
             // Extract subscription ID from frame headers
             $subscriptionId = $frame->getHeader('subscription');

@@ -32,50 +32,85 @@ class CollectStompMetrics extends Command
 
     private function collectMetrics(): array
     {
-        // Get real statistics from TR262Service
-        $stats = \App\Services\TR262Service::getGlobalStats();
+        // Get latest snapshot from database (updated by PollBrokerMetrics)
+        $latest = \App\Models\StompMetric::getLatest();
         
-        // Calculate messages per second (simple approximation)
-        $messagesPerSecond = 0;
-        if ($stats['messages_published'] > 0) {
-            // This would need historical data for accurate calculation
-            $messagesPerSecond = $stats['messages_published'];
+        if (!$latest) {
+            // Fallback to Redis counters if no DB data yet
+            $stats = \App\Services\TR262Service::getGlobalStats();
+            
+            return [
+                'timestamp' => now()->toIso8601String(),
+                'connections' => [
+                    'total' => $stats['connections_total'] ?? 0,
+                    'active' => $stats['connections_active'] ?? 0,
+                    'idle' => 0,
+                    'failed' => $stats['errors_connection'] ?? 0,
+                ],
+                'messages' => [
+                    'published_total' => $stats['messages_published'] ?? 0,
+                    'received_total' => $stats['messages_received'] ?? 0,
+                    'acked_total' => $stats['messages_acked'] ?? 0,
+                    'nacked_total' => $stats['messages_nacked'] ?? 0,
+                    'pending_ack' => 0,
+                ],
+                'subscriptions' => [
+                    'total' => 0,
+                    'active' => 0,
+                ],
+                'transactions' => [
+                    'begun' => $stats['transactions_begun'] ?? 0,
+                    'committed' => $stats['transactions_committed'] ?? 0,
+                    'aborted' => $stats['transactions_aborted'] ?? 0,
+                ],
+                'performance' => [
+                    'avg_publish_time_ms' => 0,
+                    'avg_ack_time_ms' => 0,
+                    'messages_per_second' => 0,
+                ],
+                'errors' => [
+                    'connection_failures' => $stats['errors_connection'] ?? 0,
+                    'publish_failures' => $stats['errors_publish'] ?? 0,
+                    'subscribe_failures' => $stats['errors_subscribe'] ?? 0,
+                    'timeout_errors' => 0,
+                ],
+            ];
         }
         
         return [
-            'timestamp' => now()->toIso8601String(),
+            'timestamp' => $latest->collected_at->toIso8601String(),
             'connections' => [
-                'total' => $stats['connections_total'],
-                'active' => $stats['connections_active'],
-                'idle' => max(0, $stats['connections_total'] - $stats['connections_active']),
-                'failed' => $stats['errors_connection'],
+                'total' => $latest->connections_total,
+                'active' => $latest->connections_active,
+                'idle' => $latest->connections_idle,
+                'failed' => $latest->connections_failed,
             ],
             'messages' => [
-                'published_total' => $stats['messages_published'],
-                'received_total' => $stats['messages_received'],
-                'acked_total' => $stats['messages_acked'],
-                'nacked_total' => $stats['messages_nacked'],
-                'pending_ack' => $stats['messages_received'] - $stats['messages_acked'] - $stats['messages_nacked'],
+                'published_total' => $latest->messages_published,
+                'received_total' => $latest->messages_received,
+                'acked_total' => $latest->messages_acked,
+                'nacked_total' => $latest->messages_nacked,
+                'pending_ack' => $latest->messages_pending_ack,
             ],
             'subscriptions' => [
-                'total' => 0, // Would need to query active service instances
-                'active' => 0,
+                'total' => $latest->subscriptions_total,
+                'active' => $latest->subscriptions_active,
             ],
             'transactions' => [
-                'begun' => $stats['transactions_begun'],
-                'committed' => $stats['transactions_committed'],
-                'aborted' => $stats['transactions_aborted'],
+                'begun' => $latest->transactions_begun,
+                'committed' => $latest->transactions_committed,
+                'aborted' => $latest->transactions_aborted,
             ],
             'performance' => [
-                'avg_publish_time_ms' => 0, // Would need timing instrumentation
-                'avg_ack_time_ms' => 0,
-                'messages_per_second' => $messagesPerSecond,
+                'avg_publish_time_ms' => (float) $latest->avg_publish_latency_ms,
+                'avg_ack_time_ms' => (float) $latest->avg_ack_latency_ms,
+                'messages_per_second' => (float) $latest->messages_per_second,
             ],
             'errors' => [
-                'connection_failures' => $stats['errors_connection'],
-                'publish_failures' => $stats['errors_publish'],
-                'subscribe_failures' => $stats['errors_subscribe'],
-                'timeout_errors' => 0,
+                'connection_failures' => $latest->errors_connection,
+                'publish_failures' => $latest->errors_publish,
+                'subscribe_failures' => $latest->errors_subscribe,
+                'timeout_errors' => $latest->errors_timeout,
             ],
         ];
     }
