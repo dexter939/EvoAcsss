@@ -1074,7 +1074,6 @@ async function saveParameters(params, configType) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': 'test-api-key-12345', // TODO: Use real API key
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
             body: JSON.stringify(payload)
