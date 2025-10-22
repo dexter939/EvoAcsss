@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\FemtocellController;
 use App\Http\Controllers\Api\StbServiceController;
 use App\Http\Controllers\Api\TR181Controller;
 use App\Http\Controllers\Api\TelemetryController;
+use App\Http\Controllers\Api\StompMetricsController;
 
 Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(function () {
     
@@ -24,6 +25,13 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(f
     Route::get('telemetry/history', [TelemetryController::class, 'history']);
     Route::get('telemetry/summary', [TelemetryController::class, 'summary']);
     Route::get('telemetry/health', [TelemetryController::class, 'health']);
+    
+    // TR-262 STOMP Metrics APIs
+    Route::get('stomp/metrics', [StompMetricsController::class, 'index']);
+    Route::get('stomp/connections', [StompMetricsController::class, 'connections']);
+    Route::get('stomp/throughput', [StompMetricsController::class, 'throughput']);
+    Route::get('stomp/errors', [StompMetricsController::class, 'errors']);
+    Route::get('stomp/broker-health', [StompMetricsController::class, 'brokerHealth']);
     
     // System Update APIs
     Route::get('system/status', [\App\Http\Controllers\SystemUpdateController::class, 'status']);
