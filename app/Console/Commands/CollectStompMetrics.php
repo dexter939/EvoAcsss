@@ -32,42 +32,49 @@ class CollectStompMetrics extends Command
 
     private function collectMetrics(): array
     {
-        // In a real implementation, you'd track these via the TR262Service
-        // For now, we provide a structure for monitoring
+        // Get real statistics from TR262Service
+        $stats = \App\Services\TR262Service::getGlobalStats();
+        
+        // Calculate messages per second (simple approximation)
+        $messagesPerSecond = 0;
+        if ($stats['messages_published'] > 0) {
+            // This would need historical data for accurate calculation
+            $messagesPerSecond = $stats['messages_published'];
+        }
         
         return [
             'timestamp' => now()->toIso8601String(),
             'connections' => [
-                'total' => 0, // Would query active connections
-                'active' => 0,
-                'idle' => 0,
-                'failed' => 0,
+                'total' => $stats['connections_total'],
+                'active' => $stats['connections_active'],
+                'idle' => max(0, $stats['connections_total'] - $stats['connections_active']),
+                'failed' => $stats['errors_connection'],
             ],
             'messages' => [
-                'published_total' => 0,
-                'received_total' => 0,
-                'acked_total' => 0,
-                'nacked_total' => 0,
-                'pending_ack' => 0,
+                'published_total' => $stats['messages_published'],
+                'received_total' => $stats['messages_received'],
+                'acked_total' => $stats['messages_acked'],
+                'nacked_total' => $stats['messages_nacked'],
+                'pending_ack' => $stats['messages_received'] - $stats['messages_acked'] - $stats['messages_nacked'],
             ],
             'subscriptions' => [
-                'total' => 0,
+                'total' => 0, // Would need to query active service instances
                 'active' => 0,
             ],
             'transactions' => [
-                'begun' => 0,
-                'committed' => 0,
-                'aborted' => 0,
+                'begun' => $stats['transactions_begun'],
+                'committed' => $stats['transactions_committed'],
+                'aborted' => $stats['transactions_aborted'],
             ],
             'performance' => [
-                'avg_publish_time_ms' => 0,
+                'avg_publish_time_ms' => 0, // Would need timing instrumentation
                 'avg_ack_time_ms' => 0,
-                'messages_per_second' => 0,
+                'messages_per_second' => $messagesPerSecond,
             ],
             'errors' => [
-                'connection_failures' => 0,
-                'publish_failures' => 0,
-                'subscribe_failures' => 0,
+                'connection_failures' => $stats['errors_connection'],
+                'publish_failures' => $stats['errors_publish'],
+                'subscribe_failures' => $stats['errors_subscribe'],
                 'timeout_errors' => 0,
             ],
         ];

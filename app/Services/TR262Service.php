@@ -126,6 +126,10 @@ class TR262Service
             $client->connect();
             $sessionId = $client->getSessionId() ?: uniqid('session_', true);
 
+            // Update stats
+            self::incrementStat('connections_total');
+            self::incrementStat('connections_active');
+
             // Store client and connection info
             $this->clients[$connectionId] = $client;
             $this->stompClients[$connectionId] = new SimpleStomp($client);
@@ -156,6 +160,8 @@ class TR262Service
             ];
 
         } catch (StompException $e) {
+            self::incrementStat('errors_connection');
+            
             Log::error("STOMP connection failed", [
                 'device_id' => $device->id,
                 'error' => $e->getMessage(),
@@ -183,6 +189,8 @@ class TR262Service
             
             $stomp->send($destination, $messageObj);
             
+            self::incrementStat('messages_published');
+            
             $messageId = uniqid('msg_', true);
 
             Log::info("STOMP message published", [
@@ -201,6 +209,8 @@ class TR262Service
             ];
 
         } catch (StompException $e) {
+            self::incrementStat('errors_publish');
+            
             Log::error("STOMP publish failed", [
                 'connection_id' => $connectionId,
                 'error' => $e->getMessage(),
@@ -350,6 +360,8 @@ class TR262Service
             // Send ACK frame to broker
             $stomp->ack($frame);
             
+            self::incrementStat('messages_acked');
+            
             // Clean up stored frame
             unset($this->messageFrames[$messageId]);
             
@@ -400,6 +412,8 @@ class TR262Service
             // Send NACK frame to broker
             $stomp->nack($frame);
             
+            self::incrementStat('messages_nacked');
+            
             // Clean up stored frame
             unset($this->messageFrames[$messageId]);
             
@@ -441,6 +455,8 @@ class TR262Service
             
             $stomp = $this->stompClients[$connectionId];
             $stomp->begin($transactionId);
+            
+            self::incrementStat('transactions_begun');
 
             Log::info("STOMP transaction started", [
                 'connection_id' => $connectionId,
@@ -477,6 +493,8 @@ class TR262Service
             foreach ($this->stompClients as $connectionId => $stomp) {
                 try {
                     $stomp->commit($transactionId);
+                    
+                    self::incrementStat('transactions_committed');
                     
                     Log::info("STOMP transaction committed", [
                         'connection_id' => $connectionId,
@@ -518,6 +536,8 @@ class TR262Service
             foreach ($this->stompClients as $connectionId => $stomp) {
                 try {
                     $stomp->abort($transactionId);
+                    
+                    self::incrementStat('transactions_aborted');
                     
                     Log::info("STOMP transaction aborted", [
                         'connection_id' => $connectionId,
@@ -564,6 +584,8 @@ class TR262Service
             
             // Disconnect from broker
             $client->disconnect();
+            
+            self::incrementStat('connections_active', -1);
 
             // Remove all subscriptions for this connection
             foreach ($this->subscriptions as $subId => $sub) {
@@ -638,6 +660,25 @@ class TR262Service
     }
 
     /**
+     * Statistics tracking
+     * @var array
+     */
+    private static array $stats = [
+        'connections_total' => 0,
+        'connections_active' => 0,
+        'messages_published' => 0,
+        'messages_received' => 0,
+        'messages_acked' => 0,
+        'messages_nacked' => 0,
+        'transactions_begun' => 0,
+        'transactions_committed' => 0,
+        'transactions_aborted' => 0,
+        'errors_connection' => 0,
+        'errors_publish' => 0,
+        'errors_subscribe' => 0,
+    ];
+
+    /**
      * Get connection statistics
      */
     public function getConnectionStats(string $connectionId): array
@@ -664,6 +705,40 @@ class TR262Service
             'last_heartbeat' => $connection['last_heartbeat'],
             'uptime_seconds' => now()->diffInSeconds($connection['connected_at']),
         ];
+    }
+
+    /**
+     * Get all active connections
+     */
+    public function getAllConnections(): array
+    {
+        return $this->connections;
+    }
+
+    /**
+     * Get all active subscriptions
+     */
+    public function getAllSubscriptions(): array
+    {
+        return $this->subscriptions;
+    }
+
+    /**
+     * Get global statistics
+     */
+    public static function getGlobalStats(): array
+    {
+        return self::$stats;
+    }
+
+    /**
+     * Increment stat counter
+     */
+    private static function incrementStat(string $key, int $amount = 1): void
+    {
+        if (isset(self::$stats[$key])) {
+            self::$stats[$key] += $amount;
+        }
     }
 
     /**
@@ -695,6 +770,8 @@ class TR262Service
 
             // Store frame for potential ACK/NACK
             $messageId = $this->storeFrame($frame);
+            
+            self::incrementStat('messages_received');
             
             // Extract subscription ID from frame headers
             $subscriptionId = $frame->getHeader('subscription');

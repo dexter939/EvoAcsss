@@ -35,12 +35,13 @@ class StompMetricsController extends Controller
      */
     public function connections()
     {
-        // In production, this would query TR262Service active connections
+        $globalStats = \App\Services\TR262Service::getGlobalStats();
+        
         $stats = [
-            'total_connections' => 0,
-            'active_connections' => 0,
-            'idle_connections' => 0,
-            'failed_connections' => 0,
+            'total_connections' => $globalStats['connections_total'],
+            'active_connections' => $globalStats['connections_active'],
+            'idle_connections' => max(0, $globalStats['connections_total'] - $globalStats['connections_active']),
+            'failed_connections' => $globalStats['errors_connection'],
             'connections_by_device' => [],
             'connections_by_broker' => [],
         ];
@@ -56,15 +57,19 @@ class StompMetricsController extends Controller
      */
     public function throughput()
     {
+        $globalStats = \App\Services\TR262Service::getGlobalStats();
+        
         $timeRanges = ['5m', '1h', '24h'];
         $throughput = [];
         
+        // For now, use current totals for all ranges
+        // In production, would need historical data
         foreach ($timeRanges as $range) {
             $throughput[$range] = [
-                'published' => 0,
-                'received' => 0,
-                'acked' => 0,
-                'nacked' => 0,
+                'published' => $globalStats['messages_published'],
+                'received' => $globalStats['messages_received'],
+                'acked' => $globalStats['messages_acked'],
+                'nacked' => $globalStats['messages_nacked'],
                 'avg_msg_per_sec' => 0,
             ];
         }
@@ -98,15 +103,17 @@ class StompMetricsController extends Controller
      */
     public function brokerHealth()
     {
+        $globalStats = \App\Services\TR262Service::getGlobalStats();
+        
         $brokers = [
             [
-                'broker_id' => 'broker_1',
-                'host' => 'localhost',
-                'port' => 61613,
-                'status' => 'healthy',
-                'uptime_seconds' => 86400,
-                'active_connections' => 0,
-                'message_rate' => 0,
+                'broker_id' => 'primary_broker',
+                'host' => config('stomp.host', 'localhost'),
+                'port' => config('stomp.port', 61613),
+                'status' => $globalStats['connections_active'] > 0 ? 'healthy' : 'idle',
+                'uptime_seconds' => 0, // Would need to track broker start time
+                'active_connections' => $globalStats['connections_active'],
+                'message_rate' => $globalStats['messages_published'] + $globalStats['messages_received'],
                 'last_check' => now()->toIso8601String(),
             ],
         ];
@@ -120,6 +127,7 @@ class StompMetricsController extends Controller
     private function getMetrics(string $timeRange): array
     {
         $interval = $this->getTimeInterval($timeRange);
+        $globalStats = \App\Services\TR262Service::getGlobalStats();
         
         $metrics = DB::table('system_telemetry')
             ->where('metric_name', 'like', 'stomp_%')
@@ -129,9 +137,12 @@ class StompMetricsController extends Controller
         
         return [
             'current' => [
-                'connections' => 0,
-                'messages_per_second' => 0,
+                'connections' => $globalStats['connections_active'],
+                'messages_per_second' => 0, // Would need timing data
                 'avg_latency_ms' => 0,
+                'total_published' => $globalStats['messages_published'],
+                'total_received' => $globalStats['messages_received'],
+                'total_errors' => $globalStats['errors_connection'] + $globalStats['errors_publish'],
             ],
             'historical' => $metrics,
         ];
