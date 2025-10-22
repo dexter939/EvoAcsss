@@ -19,7 +19,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
   - TR-140 (352 lines): StorageService Data Model for NAS and media servers
   - TR-157 (630 lines): Component Objects with software lifecycle management, database-backed
   - TR-181: Device:2 Data Model with device-scoped caching for 100K+ scale
-  - TR-262 (650+ lines): CWMP-STOMP Binding with **real STOMP client** (stomp-php v5.1.3), pub/sub messaging, STOMP 1.0/1.1/1.2 protocol support, transactions (BEGIN/COMMIT/ABORT), ACK/NACK, heartbeat mechanism, SSL/TLS encryption, virtual hosts. Supports ActiveMQ, RabbitMQ, Apollo, Artemis brokers
+  - TR-262 (650+ lines): CWMP-STOMP Binding with **real STOMP client** (stomp-php v5.1.3), pub/sub messaging, STOMP 1.0/1.1/1.2 protocol support, transactions (BEGIN/COMMIT/ABORT), ACK/NACK, heartbeat mechanism, SSL/TLS encryption, virtual hosts. Supports ActiveMQ, RabbitMQ, Apollo, Artemis brokers. **Production-ready monitoring system** with database-backed atomic counters, RabbitMQ Management API integration, scheduled polling (every minute), time-windowed aggregations, latency tracking, and RESTful metrics API
   - TR-369: USP (User Services Platform) with Protocol Buffers, MQTT, WebSocket, XMPP transports
 - **Database**: PostgreSQL with optimized indexing and multi-tenancy.
 - **Performance Optimizations**: Strategic database indexes, multi-tier Redis caching, and a centralized CacheService.
@@ -55,10 +55,16 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **TR-262 Production-Ready**: Implemented real STOMP client with stomp-php v5.1.3 library, replacing previous simulation with actual broker connectivity
 - **Queue Worker Fixed**: Created cache tables (cache, cache_locks) resolving Queue Worker startup failures
 - **STOMP Test Infrastructure**: Comprehensive testing guide (`docs/TR262_STOMP_Testing_Setup.md`) with Docker setup for RabbitMQ, ActiveMQ, Apollo, Artemis brokers, CI/CD integration examples (GitHub Actions, GitLab CI), and load testing scripts
-- **STOMP Monitoring**: Added metrics collection system with:
-  - CLI command: `php artisan metrics:stomp` for real-time metrics
-  - REST API endpoints: `/api/v1/stomp/metrics`, `/api/v1/stomp/connections`, `/api/v1/stomp/throughput`, `/api/v1/stomp/broker-health`
-  - StompMetricsController for connection stats, message throughput, error tracking
+- **STOMP Monitoring Production-Ready**: Carrier-grade monitoring system with:
+  - **Database-Backed Atomic Counters** (`stomp_counters` table): 12 persistent counters across all PHP processes
+  - **Historical Metrics** (`stomp_metrics` table): Time-series snapshots with 30-day retention
+  - **RabbitMQ Management API Integration** (`RabbitMQMonitor` service): Real broker introspection (connections, queues, rates, node health)
+  - **Background Polling Job** (`PollBrokerMetrics`): Scheduled every minute, merges local counters + broker stats
+  - **Latency Tracking**: Microsecond-precision timing for publish/ACK operations stored in cache table
+  - **CLI Command**: `php artisan metrics:stomp` for real-time dashboard
+  - **REST API Endpoints**: Time-windowed aggregations (5m/1h/24h) via `/api/v1/stomp/metrics`, `/api/v1/stomp/connections`, `/api/v1/stomp/throughput`, `/api/v1/stomp/broker-health`
+  - **StompMetricsController**: Time-series queries, rate calculations (msg/sec), latency averages
+  - **Fallback Strategy**: Gracefully handles broker unavailability, uses local metrics only
 - **Performance Optimization**: Cached routes, configuration, and views for production deployment
 - **Deployment Verified**: VM deployment with build.sh (migrations, caching) and run.sh (multi-service orchestration) scripts fully functional
 
