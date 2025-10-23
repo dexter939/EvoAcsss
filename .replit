@@ -59,7 +59,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "SESSION_DRIVER=database SESSION_SAME_SITE=none SESSION_SECURE_COOKIE=true php artisan config:clear && php artisan serve --host=0.0.0.0 --port=5000"
+args = "SESSION_DRIVER=database SESSION_SAME_SITE=none SESSION_SECURE_COOKIE=true SESSION_PARTITIONED_COOKIE=true php artisan config:clear && php artisan serve --host=0.0.0.0 --port=5000"
 waitForPort = 5000
 
 [[ports]]

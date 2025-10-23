@@ -4,6 +4,9 @@ The ACS (Auto Configuration Server) project is a carrier-grade Laravel 11 system
 # User Preferences
 I prefer clear and concise explanations. When making changes, prioritize core functionalities and ensure backward compatibility. I prefer an iterative development approach, focusing on delivering functional components incrementally. Please ask for confirmation before implementing significant architectural changes or altering existing API contracts. Ensure all new features have comprehensive test coverage. I want the agent to use proper markdown formatting in all its responses.
 
+# Replit Environment Configuration
+- **Session Cookies**: Replit preview runs inside an HTTPS iframe. Chrome (2025+) blocks third-party cookies unless marked with `Partitioned` flag (CHIPS standard). The ACS Server workflow MUST include `SESSION_PARTITIONED_COOKIE=true` to prevent 419 "PAGE EXPIRED" errors after login. Required session env vars: `SESSION_DRIVER=database`, `SESSION_SAME_SITE=none`, `SESSION_SECURE_COOKIE=true`, `SESSION_PARTITIONED_COOKIE=true`.
+
 # System Architecture
 
 ## UI/UX Decisions
