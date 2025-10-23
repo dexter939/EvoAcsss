@@ -1452,19 +1452,72 @@ async function aiAnalyzeDeviceHistory(deviceId) {
 
 async function triggerNetworkScan(deviceId) {
     try {
-        const response = await fetch(`/acs/devices/${deviceId}/network-scan`, {
+        const response = await fetch(`/acs/devices/${deviceId}/trigger-network-scan`, {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json'
             }
         });
         
         const result = await response.json();
         if (result.success) {
-            alert('Network scan avviato!');
+            alert('✅ ' + (result.message || 'Network scan avviato!'));
+            
+            setTimeout(() => {
+                loadNetworkTopology(deviceId);
+            }, 3000);
+        } else {
+            alert('❌ Errore: ' + (result.message || 'Impossibile avviare scan'));
         }
     } catch (error) {
         console.error('Network scan error:', error);
+        alert('❌ Errore di rete: ' + error.message);
+    }
+}
+
+async function loadNetworkTopology(deviceId) {
+    try {
+        const response = await fetch(`/acs/devices/${deviceId}/network-map`);
+        const result = await response.json();
+        
+        if (result.success && result.clients) {
+            const container = document.getElementById('network-topology-container');
+            const clientsList = document.getElementById('network-clients-list');
+            const statsTotal = document.getElementById('stats-total');
+            const statsLan = document.getElementById('stats-lan');
+            const statsWifi24 = document.getElementById('stats-wifi24');
+            const statsWifi5 = document.getElementById('stats-wifi5');
+            
+            if (result.clients.length > 0) {
+                statsTotal.textContent = result.stats.total || 0;
+                statsLan.textContent = result.stats.lan || 0;
+                statsWifi24.textContent = result.stats.wifi_2_4ghz || 0;
+                statsWifi5.textContent = result.stats.wifi_5ghz || 0;
+                
+                const clientsTable = document.getElementById('clients-table-body');
+                clientsTable.innerHTML = result.clients.map(client => `
+                    <tr>
+                        <td class="text-xs">${client.hostname || client.mac_address}</td>
+                        <td class="text-xs">${client.ip_address}</td>
+                        <td class="text-xs">
+                            <span class="badge bg-gradient-${client.connection_type === 'Ethernet' ? 'success' : 'info'}">
+                                ${client.connection_type}
+                            </span>
+                        </td>
+                        <td class="text-xs">${client.signal_strength || 'N/A'}</td>
+                        <td class="text-xs">${client.last_seen || 'N/A'}</td>
+                    </tr>
+                `).join('');
+                
+                clientsList.style.display = 'block';
+                container.innerHTML = '<p class="text-center text-success py-5"><i class="fas fa-check-circle fa-2x"></i><br/>Scansione completata - Vedi tabella sotto</p>';
+            } else {
+                container.innerHTML = '<p class="text-center text-muted py-5"><i class="fas fa-info-circle fa-2x"></i><br/>Nessun client trovato</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Load topology error:', error);
     }
 }
 
