@@ -21,6 +21,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Deployment**: VM-based deployment with configuration for always-running services and multi-service orchestration.
 - **Telemetry & Observability**: Automated metrics collection, RESTful Telemetry API, PostgreSQL persistence, and comprehensive monitoring dashboards.
 - **Software Auto-Update System**: Carrier-grade automatic deployment tracking, environment-aware versioning, transactional failure handling with rollback, 5-stage health checks, and a GitHub Releases-based system with a web dashboard.
+- **Test Infrastructure**: Comprehensive test suite with 5 Fake Services (FakeUspMqttService, FakeUspWebSocketService, FakeUpnpDiscoveryService, FakeParameterDiscoveryService, FakeConnectionRequestService) registered globally in TestCase::setUp() to isolate external dependencies. All Feature tests free from Mockery usage, ensuring deterministic test execution without real network calls to MQTT brokers, WebSocket servers, or HTTP endpoints. Unit tests with complex Mockery marked as @group skip for future refactoring.
 
 ## Feature Specifications
 - **Device Management**: Auto-registration, zero-touch provisioning with configuration profiles, firmware management, and a multi-vendor device library with auto-detection.
