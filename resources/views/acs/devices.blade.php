@@ -148,9 +148,9 @@
 
                 <!-- Actions -->
                 <div class="d-flex align-items-center justify-content-between">
-                    <button class="btn btn-sm btn-outline-primary px-3 mb-0" onclick="viewDeviceDetails({{ $device->id }})">
+                    <a href="{{ route('acs.devices.show', $device->id) }}" class="btn btn-sm btn-outline-primary px-3 mb-0">
                         <i class="fas fa-eye me-1"></i>Dettagli
-                    </button>
+                    </a>
                     
                     <div class="btn-group" role="group">
                         <button class="btn btn-link text-success px-2 mb-0" onclick="provisionDevice({{ $device->id }}, '{{ $device->serial_number }}')" title="Provisioning">
