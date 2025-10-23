@@ -46,4 +46,19 @@ class RouterManufacturer extends Model
     {
         return $this->hasMany(RouterProduct::class, 'manufacturer_id');
     }
+
+    public function quirks()
+    {
+        return $this->hasMany(VendorQuirk::class, 'manufacturer_id');
+    }
+
+    public function templates()
+    {
+        return $this->hasMany(ConfigurationTemplateLibrary::class, 'manufacturer_id');
+    }
+
+    public function getActiveQuirksCount(): int
+    {
+        return $this->quirks()->where('is_active', true)->count();
+    }
 }

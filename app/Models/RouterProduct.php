@@ -49,4 +49,26 @@ class RouterProduct extends Model
     {
         return $this->price_usd ? '$' . number_format($this->price_usd, 0) : 'N/A';
     }
+
+    public function compatibilities()
+    {
+        return $this->hasMany(FirmwareCompatibility::class, 'product_id');
+    }
+
+    public function quirks()
+    {
+        return $this->hasMany(VendorQuirk::class, 'product_id');
+    }
+
+    public function templates()
+    {
+        return $this->hasMany(ConfigurationTemplateLibrary::class, 'product_id');
+    }
+
+    public function getCompatibleFirmwareCount(): int
+    {
+        return $this->compatibilities()
+            ->where('compatibility_status', 'compatible')
+            ->count();
+    }
 }

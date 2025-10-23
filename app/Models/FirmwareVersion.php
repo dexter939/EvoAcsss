@@ -84,4 +84,23 @@ class FirmwareVersion extends Model
     {
         return $this->hasMany(FirmwareDeployment::class);
     }
+
+    /**
+     * Relazione con compatibility matrix
+     * Relationship with compatibility matrix
+     */
+    public function compatibilities(): HasMany
+    {
+        return $this->hasMany(FirmwareCompatibility::class);
+    }
+
+    /**
+     * Get compatible products count
+     */
+    public function getCompatibleProductsCount(): int
+    {
+        return $this->compatibilities()
+            ->where('compatibility_status', 'compatible')
+            ->count();
+    }
 }
