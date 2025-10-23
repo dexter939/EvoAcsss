@@ -1,0 +1,125 @@
+# Illuminate\Database\QueryException - Internal Server Error
+SQLSTATE[42P01]: Undefined table: 7 ERROR:  relation "security_logs" does not exist
+LINE 1: insert into "security_logs" ("event_type", "severity", "ip_a...
+                    ^ (Connection: pgsql, SQL: insert into "security_logs" ("event_type", "severity", "ip_address", "user_agent", "user_id", "action", "description", "metadata", "endpoint", "method", "status_code", "risk_level", "blocked", "updated_at", "created_at") values (login_failed, warning, 10.83.4.160, Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36, ?, login_attempt_failed, Failed login attempt for admin@acs.local, {"email":"admin@acs.local","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Replit\/1.0.14 Chrome\/124.0.6367.119 Electron\/30.0.3 Safari\/537.36"}, login, POST, ?, medium, 0, 2025-10-23 15:57:21, 2025-10-23 15:57:21) returning "id")
+
+PHP 8.3.23
+Laravel 12.33.0
+af033280-2a00-40b8-aa0d-5550f59fd4d2-00-6y2330nmtgv4.janeway.replit.dev
+
+## Stack Trace
+
+0 - vendor/laravel/framework/src/Illuminate/Database/Connection.php:824
+1 - vendor/laravel/framework/src/Illuminate/Database/Connection.php:778
+2 - vendor/laravel/framework/src/Illuminate/Database/Connection.php:397
+3 - vendor/laravel/framework/src/Illuminate/Database/Connection.php:384
+4 - vendor/laravel/framework/src/Illuminate/Database/Query/Processors/PostgresProcessor.php:24
+5 - vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php:3853
+6 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php:2235
+7 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php:1436
+8 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php:1401
+9 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php:1240
+10 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php:1219
+11 - vendor/laravel/framework/src/Illuminate/Support/helpers.php:390
+12 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php:1218
+13 - vendor/laravel/framework/src/Illuminate/Support/Traits/ForwardsCalls.php:23
+14 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php:2540
+15 - vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php:2556
+16 - app/Models/SecurityLog.php:43
+17 - app/Http/Controllers/Auth/AuthenticatedSessionController.php:26
+18 - vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php:46
+19 - vendor/laravel/framework/src/Illuminate/Routing/Route.php:265
+20 - vendor/laravel/framework/src/Illuminate/Routing/Route.php:211
+21 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:822
+22 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:180
+23 - vendor/laravel/framework/src/Illuminate/Auth/Middleware/RedirectIfAuthenticated.php:35
+24 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+25 - vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php:50
+26 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+27 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/VerifyCsrfToken.php:87
+28 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+29 - vendor/laravel/framework/src/Illuminate/View/Middleware/ShareErrorsFromSession.php:48
+30 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+31 - vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php:120
+32 - vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php:63
+33 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+34 - vendor/laravel/framework/src/Illuminate/Cookie/Middleware/AddQueuedCookiesToResponse.php:36
+35 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+36 - vendor/laravel/framework/src/Illuminate/Cookie/Middleware/EncryptCookies.php:74
+37 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+38 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:137
+39 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:821
+40 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:800
+41 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:764
+42 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:753
+43 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php:200
+44 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:180
+45 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php:21
+46 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php:31
+47 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+48 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php:21
+49 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php:51
+50 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+51 - vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php:27
+52 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+53 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php:109
+54 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+55 - vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php:48
+56 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+57 - vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php:58
+58 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+59 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php:22
+60 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+61 - vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php:26
+62 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+63 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:137
+64 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php:175
+65 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php:144
+66 - vendor/laravel/framework/src/Illuminate/Foundation/Application.php:1220
+67 - public/index.php:20
+68 - vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php:23
+
+## Request
+
+POST /login
+
+## Headers
+
+* **host**: af033280-2a00-40b8-aa0d-5550f59fd4d2-00-6y2330nmtgv4.janeway.replit.dev
+* **user-agent**: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36
+* **content-length**: 89
+* **accept**: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+* **accept-encoding**: gzip, deflate, br
+* **accept-language**: it
+* **cache-control**: max-age=0
+* **content-type**: application/x-www-form-urlencoded
+* **cookie**: XSRF-TOKEN=eyJpdiI6IitZcUN3WkNoZElJUjFKU0VnSDBBRVE9PSIsInZhbHVlIjoidlkxMGRXWlIzL0kwTFF2WDRkbW1DMmsrQ2h4cFdQYzRIc1ZWSmFOWSswdHloNXBhc0xMSXl1MEgrT1A4L1Nxc0NaVHJrempZZlE1YkttdzhuZE1oZ0dFU3MzTmhjZ01MaUw3V25Nbm9zT1VUd1dVU2JrOC9XZ2FvOXhoTUFTT0IiLCJtYWMiOiI0NDg0M2VhNDAyNjZmMzhmMmY0YzY2NjZkODJhZGY1N2NhOTNlYjIzNzBmYWVjY2U0MmZhOWRmODZkNmVhZjMyIiwidGFnIjoiIn0%3D; laravel-session=eyJpdiI6InJlcTdCUEo5V0hBWHoxMlR5TURWVVE9PSIsInZhbHVlIjoiZDZUNzlvY2ZSVC9NM293NEMyVjk4SE1YaGhQQms1UFNzeWtFMHJUbEZqb3p6WUZEck1vd1Y1RFdpSHhWTVZ1TWg1SldvZU9Pb29LTlI1SGwvN2FGYnFXUHpnVjhWY3ZLYnVTWlhYdysvejRodVEwaXhkMHEwTDZrenlyQ0RwRTYiLCJtYWMiOiIyNzg4OGJjYWJlOGExNTUyZWFhOGY4YjczODhjMDdiOGRhOTc3YzgwYzFkZWEyNGJmYjQwNjg0ZGJhNTkwYTEyIiwidGFnIjoiIn0%3D
+* **origin**: https://af033280-2a00-40b8-aa0d-5550f59fd4d2-00-6y2330nmtgv4.janeway.replit.dev
+* **referer**: https://af033280-2a00-40b8-aa0d-5550f59fd4d2-00-6y2330nmtgv4.janeway.replit.dev/login
+* **sec-fetch-dest**: document
+* **sec-fetch-mode**: navigate
+* **sec-fetch-site**: same-origin
+* **sec-fetch-user**: ?1
+* **upgrade-insecure-requests**: 1
+* **x-forwarded-for**: 45.148.193.122, 10.83.4.160
+* **x-forwarded-proto**: https
+* **x-replit-user-bio**: 
+* **x-replit-user-id**: 
+* **x-replit-user-name**: 
+* **x-replit-user-profile-image**: 
+* **x-replit-user-roles**: 
+* **x-replit-user-teams**: 
+* **x-replit-user-url**: 
+
+## Route Context
+
+controller: App\Http\Controllers\Auth\AuthenticatedSessionController@store
+middleware: web, guest
+
+## Route Parameters
+
+No route parameter data available.
+
+## Database Queries
+
+* pgsql - select * from "users" where "email" = 'admin@acs.local' limit 1 (271.47 ms)

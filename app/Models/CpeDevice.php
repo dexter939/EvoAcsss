@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\Auditable;
 
 /**
  * CpeDevice - Modello per dispositivi CPE (Customer Premises Equipment)
@@ -34,7 +35,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class CpeDevice extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Auditable;
+    
+    protected $auditCategory = 'device';
 
     /**
      * Campi assegnabili in massa

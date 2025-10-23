@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\TR181Controller;
 use App\Http\Controllers\Api\TelemetryController;
 use App\Http\Controllers\Api\StompMetricsController;
 use App\Http\Controllers\Api\VendorLibraryController;
+use App\Http\Controllers\Api\AuditLogController;
 
 Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(function () {
     
@@ -230,4 +231,12 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(f
             Route::post('firmware-check', [VendorLibraryController::class, 'bulkFirmwareCompatibilityCheck']);
         });
     });
+    
+    // Audit Log APIs
+    Route::get('audit-logs', [AuditLogController::class, 'index']);
+    Route::get('audit-logs/statistics', [AuditLogController::class, 'statistics']);
+    Route::get('audit-logs/export/csv', [AuditLogController::class, 'exportCsv']);
+    Route::get('audit-logs/export/json', [AuditLogController::class, 'exportJson']);
+    Route::get('audit-logs/for-model', [AuditLogController::class, 'forModel']);
+    Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show']);
 });

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\Auditable;
 
 /**
  * FirmwareVersion - Modello per versioni firmware dispositivi CPE
@@ -23,7 +24,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class FirmwareVersion extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
+    
+    protected $auditCategory = 'firmware';
+    
     /**
      * Campi assegnabili in massa
      * Mass assignable fields
