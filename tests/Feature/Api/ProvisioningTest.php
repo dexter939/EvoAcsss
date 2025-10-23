@@ -112,21 +112,8 @@ class ProvisioningTest extends TestCase
 
     public function test_connection_request_initiates_device_connection(): void
     {
-        // Mock ConnectionRequestService per test (altrimenti usa Guzzle real HTTP)
-        // Mock ConnectionRequestService for test (otherwise uses real Guzzle HTTP)
-        $mockService = \Mockery::mock(\App\Services\ConnectionRequestService::class);
-        $mockService->shouldReceive('isConnectionRequestSupported')
-            ->andReturn(true);
-        $mockService->shouldReceive('testConnectionRequest')
-            ->andReturn([
-                'success' => true,
-                'message' => 'Connection request sent successfully',
-                'method' => 'GET',
-                'status_code' => 200
-            ]);
+        // FakeConnectionRequestService is already registered in TestCase::setUp()
         
-        $this->app->instance(\App\Services\ConnectionRequestService::class, $mockService);
-
         $device = CpeDevice::factory()->tr069()->create([
             'status' => 'online',
             'connection_request_url' => 'http://device.example.com:7547',

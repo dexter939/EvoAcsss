@@ -5,9 +5,7 @@ namespace Tests\Feature\Api;
 use Tests\TestCase;
 use App\Models\CpeDevice;
 use App\Models\LanDevice;
-use App\Services\UpnpDiscoveryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
 
 class LanDeviceTest extends TestCase
 {
@@ -50,26 +48,8 @@ class LanDeviceTest extends TestCase
 
         $usn = 'uuid:' . uniqid();
         
-        $mockLanDevice = LanDevice::create([
-            'cpe_device_id' => $device->id,
-            'usn' => $usn,
-            'location' => 'http://192.168.1.100:1900/description.xml',
-            'device_type' => 'urn:schemas-upnp-org:device:MediaRenderer:1',
-            'status' => 'active',
-            'last_seen' => now()
-        ]);
-
-        $mock = Mockery::mock(UpnpDiscoveryService::class);
-        $mock->shouldReceive('processSsdpAnnouncement')
-            ->once()
-            ->with(
-                Mockery::on(fn($d) => $d->id === $device->id),
-                Mockery::type('array')
-            )
-            ->andReturn($mockLanDevice);
-
-        $this->app->instance(UpnpDiscoveryService::class, $mock);
-
+        // FakeUpnpDiscoveryService is already registered in TestCase::setUp()
+        
         $response = $this->apiPost("/api/v1/devices/{$device->id}/lan-devices/ssdp", [
             'usn' => $usn,
             'location' => 'http://192.168.1.100:1900/description.xml'

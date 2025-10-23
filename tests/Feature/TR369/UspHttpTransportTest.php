@@ -7,7 +7,6 @@ use App\Models\CpeDevice;
 use App\Services\UspMessageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Mockery;
 
 class UspHttpTransportTest extends TestCase
 {

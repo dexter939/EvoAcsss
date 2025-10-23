@@ -6,8 +6,14 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Fakes\FakeUspMqttService;
 use Tests\Fakes\FakeUspWebSocketService;
+use Tests\Fakes\FakeUpnpDiscoveryService;
+use Tests\Fakes\FakeParameterDiscoveryService;
+use Tests\Fakes\FakeConnectionRequestService;
 use App\Services\UspMqttService;
 use App\Services\UspWebSocketService;
+use App\Services\UpnpDiscoveryService;
+use App\Services\ParameterDiscoveryService;
+use App\Services\ConnectionRequestService;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -22,13 +28,28 @@ abstract class TestCase extends BaseTestCase
         
         $this->withoutVite();
         
-        // Replace real USP services with fakes to avoid actual MQTT/WebSocket connections
+        // Replace real services with fakes to avoid actual network connections
+        
+        // USP Protocol Services
         $this->app->singleton(UspMqttService::class, function ($app) {
             return new FakeUspMqttService();
         });
         
         $this->app->singleton(UspWebSocketService::class, function ($app) {
             return new FakeUspWebSocketService();
+        });
+        
+        // Discovery and Provisioning Services
+        $this->app->singleton(UpnpDiscoveryService::class, function ($app) {
+            return new FakeUpnpDiscoveryService();
+        });
+        
+        $this->app->singleton(ParameterDiscoveryService::class, function ($app) {
+            return new FakeParameterDiscoveryService();
+        });
+        
+        $this->app->singleton(ConnectionRequestService::class, function ($app) {
+            return new FakeConnectionRequestService();
         });
     }
 

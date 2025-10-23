@@ -6,9 +6,7 @@ use Tests\TestCase;
 use App\Models\CpeDevice;
 use App\Models\DeviceCapability;
 use App\Models\ProvisioningTask;
-use App\Services\ParameterDiscoveryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
 
 class DeviceModelingTest extends TestCase
 {
@@ -22,27 +20,8 @@ class DeviceModelingTest extends TestCase
             'status' => 'online'
         ]);
 
-        $mockTask = ProvisioningTask::create([
-            'cpe_device_id' => $device->id,
-            'task_type' => 'get_parameters',
-            'status' => 'pending',
-            'task_data' => ['path' => 'Device.'],
-            'retry_count' => 0,
-            'max_retries' => 3
-        ]);
-
-        $mock = Mockery::mock(ParameterDiscoveryService::class);
-        $mock->shouldReceive('discoverParameters')
-            ->once()
-            ->with(
-                Mockery::on(fn($d) => $d->id === $device->id),
-                null,
-                true
-            )
-            ->andReturn($mockTask);
-
-        $this->app->instance(ParameterDiscoveryService::class, $mock);
-
+        // FakeParameterDiscoveryService is already registered in TestCase::setUp()
+        
         $response = $this->apiPost("/api/v1/devices/{$device->id}/discover-parameters", [
             'parameter_path' => null,
             'next_level_only' => true
