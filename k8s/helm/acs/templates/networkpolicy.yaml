@@ -1,0 +1,180 @@
+{{- if .Values.networkPolicy.enabled }}
+---
+# NetworkPolicy for ACS App
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "acs.app.name" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "acs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  ingress:
+    # Allow from ingress controller
+    - from:
+      {{- toYaml .Values.networkPolicy.ingress | nindent 6 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from other app pods (for internal communication)
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: database
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: cache
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow to Prosody XMPP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: xmpp
+      ports:
+        - protocol: TCP
+          port: 5222
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow HTTPS to external services (OpenAI, etc.)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# NetworkPolicy for Workers
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "acs.worker.name" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "acs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  policyTypes:
+    - Egress
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: database
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: cache
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow HTTPS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# NetworkPolicy for PostgreSQL
+{{- if .Values.postgresql.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "acs.postgresql.fullname" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "acs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: database
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only allow from app and workers
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+{{- end }}
+
+---
+# NetworkPolicy for Redis
+{{- if .Values.redis.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "acs.redis.fullname" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "acs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: cache
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only allow from app and workers
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "acs.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 6379
+{{- end }}
+{{- end }}

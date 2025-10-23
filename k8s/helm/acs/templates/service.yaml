@@ -1,0 +1,154 @@
+---
+# ACS App Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acs.app.name" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  type: {{ .Values.service.app.type }}
+  ports:
+    - port: {{ .Values.service.app.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "acs.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+
+---
+# TR-069 Service (LoadBalancer for external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acs.fullname" . }}-tr069
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+  {{- with .Values.service.tr069.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.tr069.type }}
+  ports:
+    - port: {{ .Values.service.tr069.port }}
+      targetPort: tr069
+      protocol: TCP
+      name: tr069
+  selector:
+    {{- include "acs.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+
+---
+# PostgreSQL Service
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acs.postgresql.fullname" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgresql
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "acs.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+
+---
+# PostgreSQL Headless Service (for StatefulSet)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acs.postgresql.fullname" . }}-headless
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 5432
+      targetPort: postgresql
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "acs.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+{{- end }}
+
+---
+# Redis Service
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acs.redis.fullname" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cache
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: redis
+      protocol: TCP
+      name: redis
+  selector:
+    {{- include "acs.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: cache
+
+---
+# Redis Headless Service (for StatefulSet)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acs.redis.fullname" . }}-headless
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cache
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 6379
+      targetPort: redis
+      protocol: TCP
+      name: redis
+  selector:
+    {{- include "acs.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: cache
+{{- end }}
+
+---
+# Prosody XMPP Service
+{{- if .Values.prosody.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acs.prosody.fullname" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: xmpp
+spec:
+  type: {{ .Values.prosody.service.type }}
+  ports:
+    - port: {{ .Values.prosody.service.port }}
+      targetPort: client
+      protocol: TCP
+      name: xmpp-client
+    - port: 5269
+      targetPort: server
+      protocol: TCP
+      name: xmpp-server
+  selector:
+    {{- include "acs.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: xmpp
+{{- end }}
