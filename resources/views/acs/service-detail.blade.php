@@ -114,7 +114,7 @@
                                         </span>
                                     </td>
                                     <td class="align-middle">
-                                        <a href="{{ route('devices.show', $device->id) }}" 
+                                        <a href="{{ route('acs.devices.show', $device->id) }}" 
                                            class="btn btn-link text-secondary mb-0" data-toggle="tooltip" data-original-title="Vedi dettagli">
                                             <i class="fa fa-eye text-xs"></i> Dettagli
                                         </a>
