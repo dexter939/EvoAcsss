@@ -274,46 +274,75 @@ docker-compose -f docker-compose.monitoring.yml down
 
 ## AlertManager Configuration
 
-### Email Notifications
+AlertManager is configured via environment variables for security. All notification channels (Email, Slack, PagerDuty) are pre-configured in `monitoring/alertmanager/config.yml`.
 
-Edit `monitoring/alertmanager/config.yml`:
+### Step 1: Configure Environment Variables
 
-```yaml
-global:
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'acs-alerts@yourdomain.com'
-  smtp_auth_username: 'alerts@yourdomain.com'
-  smtp_auth_password: 'your-app-password'
+Create `monitoring/alertmanager/.env` based on `.env.example`:
 
-receivers:
-  - name: 'critical-alerts'
-    email_configs:
-      - to: 'oncall@yourdomain.com'
-        headers:
-          Subject: '[CRITICAL] ACS Alert: {{ .GroupLabels.alertname }}'
+```bash
+# SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_FROM=acs-alerts@yourdomain.com
+SMTP_USERNAME=alerts@yourdomain.com
+SMTP_PASSWORD=your-app-password-here
+
+# Email Recipients
+EMAIL_OPS_TEAM=ops-team@yourdomain.com
+EMAIL_ONCALL=oncall@yourdomain.com
+
+# Slack Configuration
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+
+# PagerDuty Configuration
+PAGERDUTY_ROUTING_KEY=your-pagerduty-integration-key-here
 ```
 
-### Slack Integration
+### Step 2: Kubernetes Secrets
 
-```yaml
-receivers:
-  - name: 'slack-critical'
-    slack_configs:
-      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-        channel: '#acs-critical-alerts'
-        title: 'ACS Critical Alert'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+For Kubernetes deployments, create a secret:
+
+```bash
+# Create AlertManager secret from env file
+kubectl create secret generic alertmanager-config \
+  --from-env-file=monitoring/alertmanager/.env \
+  -n monitoring
+
+# Update AlertManager deployment to use secret
+kubectl set env deployment/alertmanager \
+  --from=secret/alertmanager-config \
+  -n monitoring
 ```
 
-### PagerDuty Integration
+### Step 3: Verify Notification Channels
 
-```yaml
-receivers:
-  - name: 'pagerduty-oncall'
-    pagerduty_configs:
-      - service_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
-        description: '{{ .GroupLabels.alertname }}'
-```
+**Email:**
+- SMTP must allow app passwords or STARTTLS
+- Gmail requires app-specific password (not account password)
+- Test: Send test alert via AlertManager UI
+
+**Slack:**
+1. Create Slack app at https://api.slack.com/apps
+2. Enable Incoming Webhooks
+3. Create webhook for #acs-critical-alerts channel
+4. Copy webhook URL to SLACK_WEBHOOK_URL
+
+**PagerDuty:**
+1. Create PagerDuty service integration
+2. Select "Events API V2" integration type
+3. Copy Integration Key to PAGERDUTY_ROUTING_KEY
+4. Configure escalation policy for critical alerts
+
+### Pre-configured Alert Routes
+
+The AlertManager config includes three receivers:
+
+1. **default** - All alerts → Email to ops team
+2. **critical-alerts** - Critical severity → Email + Slack + PagerDuty
+3. **warning-alerts** - Warning severity → Email + Slack
+
+Critical alerts are routed to all channels with `continue: true`, ensuring maximum visibility.
 
 ## Troubleshooting
 

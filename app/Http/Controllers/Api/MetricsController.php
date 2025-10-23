@@ -36,10 +36,7 @@ class MetricsController extends Controller
     public function index()
     {
         try {
-            // Clear existing metrics to prevent stale data
-            $this->registry->wipeStorage();
-            
-            // Collect all metrics
+            // Collect all metrics (using gauges only, no wipeStorage)
             $this->collectDeviceMetrics();
             $this->collectSessionMetrics();
             $this->collectQueueMetrics();
@@ -81,17 +78,24 @@ class MetricsController extends Controller
         );
         $gauge->set($totalDevices);
         
-        // Devices by status
-        $devicesByStatus = CpeDevice::select('status', DB::raw('count(*) as count'))
-            ->groupBy('status')
-            ->get();
-        
+        // Devices by status - reset all known statuses to zero first
         $statusGauge = $this->registry->getOrRegisterGauge(
             $namespace,
             'devices_by_status',
             'Number of devices by status',
             ['status']
         );
+        
+        // Reset all known statuses to zero
+        $knownStatuses = ['online', 'offline', 'unknown', 'provisioning', 'error'];
+        foreach ($knownStatuses as $status) {
+            $statusGauge->set(0, [$status]);
+        }
+        
+        // Set actual values
+        $devicesByStatus = CpeDevice::select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->get();
         
         foreach ($devicesByStatus as $item) {
             $statusGauge->set($item->count, [$item->status ?? 'unknown']);
@@ -182,7 +186,7 @@ class MetricsController extends Controller
     {
         $namespace = 'acs';
         
-        // Pending jobs by queue
+        // Known queues
         $queues = ['default', 'provisioning', 'firmware', 'tr069'];
         
         $pendingGauge = $this->registry->getOrRegisterGauge(
@@ -199,6 +203,13 @@ class MetricsController extends Controller
             ['queue']
         );
         
+        // Reset all queues to zero first to handle empty queues
+        foreach ($queues as $queue) {
+            $pendingGauge->set(0, [$queue]);
+            $failedGauge->set(0, [$queue]);
+        }
+        
+        // Set actual values
         foreach ($queues as $queue) {
             // Pending jobs
             $pending = DB::table('jobs')
@@ -239,18 +250,25 @@ class MetricsController extends Controller
         );
         $activeGauge->set($activeAlarms);
         
-        // Alarms by severity
-        $alarmsBySeverity = Alarm::select('severity', DB::raw('count(*) as count'))
-            ->where('status', 'active')
-            ->groupBy('severity')
-            ->get();
-        
+        // Alarms by severity - reset all severities to zero first
         $severityGauge = $this->registry->getOrRegisterGauge(
             $namespace,
             'alarms_by_severity',
             'Active alarms by severity',
             ['severity']
         );
+        
+        // Reset all known severities to zero
+        $knownSeverities = ['critical', 'major', 'minor', 'warning', 'info'];
+        foreach ($knownSeverities as $severity) {
+            $severityGauge->set(0, [$severity]);
+        }
+        
+        // Set actual values
+        $alarmsBySeverity = Alarm::select('severity', DB::raw('count(*) as count'))
+            ->where('status', 'active')
+            ->groupBy('severity')
+            ->get();
         
         foreach ($alarmsBySeverity as $item) {
             $severityGauge->set($item->count, [$item->severity]);
@@ -276,16 +294,23 @@ class MetricsController extends Controller
     {
         $namespace = 'acs';
         
-        // Devices by protocol
-        $tr069Devices = CpeDevice::where('protocol', 'TR-069')->count();
-        $tr369Devices = CpeDevice::where('protocol', 'TR-369')->count();
-        
+        // Devices by protocol - reset to zero first
         $protocolGauge = $this->registry->getOrRegisterGauge(
             $namespace,
             'devices_by_protocol',
             'Devices by protocol type',
             ['protocol']
         );
+        
+        // Reset all protocols to zero
+        $knownProtocols = ['TR-069', 'TR-369', 'TR-104', 'TR-111'];
+        foreach ($knownProtocols as $protocol) {
+            $protocolGauge->set(0, [$protocol]);
+        }
+        
+        // Set actual values
+        $tr069Devices = CpeDevice::where('protocol', 'TR-069')->count();
+        $tr369Devices = CpeDevice::where('protocol', 'TR-369')->count();
         
         $protocolGauge->set($tr069Devices, ['TR-069']);
         $protocolGauge->set($tr369Devices, ['TR-369']);

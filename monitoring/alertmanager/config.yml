@@ -1,9 +1,11 @@
 global:
   resolve_timeout: 5m
-  smtp_smarthost: 'smtp.example.com:587'
-  smtp_from: 'acs-alerts@example.com'
-  smtp_auth_username: 'alerts@example.com'
-  smtp_auth_password: 'your-password-here'
+  smtp_smarthost: '{{ env "SMTP_HOST" }}:{{ env "SMTP_PORT" }}'
+  smtp_from: '{{ env "SMTP_FROM" }}'
+  smtp_auth_username: '{{ env "SMTP_USERNAME" }}'
+  smtp_auth_password: '{{ env "SMTP_PASSWORD" }}'
+  slack_api_url: '{{ env "SLACK_WEBHOOK_URL" }}'
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
 
 route:
   group_by: ['alertname', 'cluster', 'service']
@@ -23,25 +25,68 @@ route:
 receivers:
   - name: 'default'
     email_configs:
-      - to: 'ops-team@example.com'
+      - to: '{{ env "EMAIL_OPS_TEAM" }}'
         headers:
           Subject: '[ACS] {{ .GroupLabels.alertname }}'
+        html: |
+          <h2>ACS Alert: {{ .GroupLabels.alertname }}</h2>
+          <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+          <p><strong>Component:</strong> {{ .CommonLabels.component }}</p>
+          {{ range .Alerts }}
+          <hr>
+          <p><strong>Alert:</strong> {{ .Labels.alertname }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+          <p><strong>Starts:</strong> {{ .StartsAt }}</p>
+          {{ end }}
 
   - name: 'critical-alerts'
     email_configs:
-      - to: 'oncall@example.com'
+      - to: '{{ env "EMAIL_ONCALL" }}'
         headers:
           Subject: '[CRITICAL] [ACS] {{ .GroupLabels.alertname }}'
-    # Add Slack/PagerDuty/etc webhooks here
-    # slack_configs:
-    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-    #     channel: '#acs-critical-alerts'
+        send_resolved: true
+    
+    slack_configs:
+      - channel: '#acs-critical-alerts'
+        title: ':fire: ACS Critical Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Severity:* {{ .CommonLabels.severity }}
+          *Component:* {{ .CommonLabels.component }}
+          {{ range .Alerts }}
+          • {{ .Annotations.description }}
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+    
+    pagerduty_configs:
+      - routing_key: '{{ env "PAGERDUTY_ROUTING_KEY" }}'
+        severity: 'critical'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          component: '{{ .CommonLabels.component }}'
 
   - name: 'warning-alerts'
     email_configs:
-      - to: 'ops-team@example.com'
+      - to: '{{ env "EMAIL_OPS_TEAM" }}'
         headers:
           Subject: '[WARNING] [ACS] {{ .GroupLabels.alertname }}'
+        send_resolved: true
+    
+    slack_configs:
+      - channel: '#acs-monitoring'
+        title: ':warning: ACS Warning Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Severity:* {{ .CommonLabels.severity }}
+          *Component:* {{ .CommonLabels.component }}
+          {{ range .Alerts }}
+          • {{ .Annotations.description }}
+          {{ end }}
+        color: 'warning'
+        send_resolved: true
 
 inhibit_rules:
   - source_match:
