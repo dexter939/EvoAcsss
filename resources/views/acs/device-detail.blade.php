@@ -210,7 +210,7 @@
                                             <tr>
                                                 <td class="text-xs text-secondary border-0">Servizio</td>
                                                 <td class="text-xs font-weight-bold border-0">
-                                                    <a href="{{ route('acs.service.detail', $device->service->id) }}" class="text-primary">
+                                                    <a href="{{ route('acs.services.detail', $device->service->id) }}" class="text-primary">
                                                         {{ $device->service->name }}
                                                     </a>
                                                 </td>
