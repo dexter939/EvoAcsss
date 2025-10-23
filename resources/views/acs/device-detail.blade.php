@@ -1151,7 +1151,7 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-const deviceId = {{ $device->id }};
+// deviceId già definito all'inizio della pagina (riga ~20)
 
 // Search parameters
 document.getElementById('parameterSearch')?.addEventListener('input', function(e) {
