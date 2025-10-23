@@ -158,5 +158,12 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(f
         Route::post('detect', [VendorLibraryController::class, 'detectVendor']);
         Route::post('compatibility/check', [VendorLibraryController::class, 'checkCompatibility']);
         Route::get('stats', [VendorLibraryController::class, 'getStatistics']);
+        
+        // Bulk Operations
+        Route::prefix('bulk')->group(function () {
+            Route::post('detect', [VendorLibraryController::class, 'bulkDetectVendor']);
+            Route::post('apply-template', [VendorLibraryController::class, 'bulkApplyTemplate']);
+            Route::post('firmware-check', [VendorLibraryController::class, 'bulkFirmwareCompatibilityCheck']);
+        });
     });
 });
