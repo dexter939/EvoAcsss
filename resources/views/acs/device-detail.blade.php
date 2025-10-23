@@ -286,7 +286,7 @@
                                                 <td class="text-xs text-secondary border-0">Periodic Inform</td>
                                                 <td class="text-xs font-weight-bold border-0">
                                                     @php
-                                                        $periodicInform = $device->parameters->where('parameter_path', 'LIKE', '%PeriodicInformInterval%')->first();
+                                                        $periodicInform = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'PeriodicInformInterval'));
                                                     @endphp
                                                     {{ $periodicInform ? $periodicInform->parameter_value . ' sec' : 'N/A' }}
                                                 </td>
@@ -355,7 +355,7 @@
                                                 <p class="text-xs mb-1"><i class="fas fa-circle text-success me-2"></i>Uptime dispositivo</p>
                                                 <h6 class="font-weight-bolder mb-0" id="device-uptime">
                                                     @php
-                                                        $uptime = $device->parameters->where('parameter_path', 'LIKE', '%UpTime%')->first();
+                                                        $uptime = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'UpTime'));
                                                         if ($uptime && is_numeric($uptime->parameter_value)) {
                                                             $seconds = (int)$uptime->parameter_value;
                                                             $days = floor($seconds / 86400);
@@ -512,10 +512,10 @@
                                     </div>
                                     <div class="card-body">
                                         @php
-                                            $wanIP = $device->parameters->where('parameter_path', 'LIKE', '%ExternalIPAddress%')->first();
-                                            $wanMask = $device->parameters->where('parameter_path', 'LIKE', '%SubnetMask%')->first();
-                                            $wanGateway = $device->parameters->where('parameter_path', 'LIKE', '%DefaultGateway%')->first();
-                                            $wanDNS = $device->parameters->where('parameter_path', 'LIKE', '%DNSServers%')->first();
+                                            $wanIP = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'ExternalIPAddress'));
+                                            $wanMask = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'SubnetMask') && str_contains($p->parameter_path, 'WAN'));
+                                            $wanGateway = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'DefaultGateway'));
+                                            $wanDNS = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'DNSServers'));
                                         @endphp
                                         <table class="table table-sm">
                                             <tr>
@@ -547,11 +547,11 @@
                                     </div>
                                     <div class="card-body">
                                         @php
-                                            $lanIP = $device->parameters->where('parameter_path', 'LIKE', '%LANHostConfigManagement%IPInterfaceIPAddress%')->first();
-                                            $lanMask = $device->parameters->where('parameter_path', 'LIKE', '%LANHostConfigManagement%IPInterfaceSubnetMask%')->first();
-                                            $dhcpEnable = $device->parameters->where('parameter_path', 'LIKE', '%DHCPServerEnable%')->first();
-                                            $dhcpMin = $device->parameters->where('parameter_path', 'LIKE', '%MinAddress%')->first();
-                                            $dhcpMax = $device->parameters->where('parameter_path', 'LIKE', '%MaxAddress%')->first();
+                                            $lanIP = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'LANHostConfigManagement') && str_contains($p->parameter_path, 'IPInterfaceIPAddress'));
+                                            $lanMask = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'LANHostConfigManagement') && str_contains($p->parameter_path, 'IPInterfaceSubnetMask'));
+                                            $dhcpEnable = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'DHCPServerEnable'));
+                                            $dhcpMin = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'MinAddress'));
+                                            $dhcpMax = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'MaxAddress'));
                                         @endphp
                                         <table class="table table-sm">
                                             <tr>
@@ -593,11 +593,11 @@
                                     </div>
                                     <div class="card-body">
                                         @php
-                                            $wifi24_enable = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.1.Enable%')->first();
-                                            $wifi24_ssid = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.1.SSID%')->first();
-                                            $wifi24_channel = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.1.Channel%')->first();
-                                            $wifi24_security = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.1.BeaconType%')->first();
-                                            $wifi24_standard = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.1.Standard%')->first();
+                                            $wifi24_enable = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.1.Enable'));
+                                            $wifi24_ssid = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.1.SSID'));
+                                            $wifi24_channel = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.1.Channel'));
+                                            $wifi24_security = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.1.BeaconType'));
+                                            $wifi24_standard = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.1.Standard'));
                                         @endphp
                                         <table class="table table-sm">
                                             <tr>
@@ -641,11 +641,11 @@
                                     </div>
                                     <div class="card-body">
                                         @php
-                                            $wifi5_enable = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.2.Enable%')->first();
-                                            $wifi5_ssid = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.2.SSID%')->first();
-                                            $wifi5_channel = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.2.Channel%')->first();
-                                            $wifi5_security = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.2.BeaconType%')->first();
-                                            $wifi5_standard = $device->parameters->where('parameter_path', 'LIKE', '%WLANConfiguration.2.Standard%')->first();
+                                            $wifi5_enable = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.2.Enable'));
+                                            $wifi5_ssid = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.2.SSID'));
+                                            $wifi5_channel = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.2.Channel'));
+                                            $wifi5_security = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.2.BeaconType'));
+                                            $wifi5_standard = $device->parameters->first(fn($p) => str_contains($p->parameter_path, 'WLANConfiguration.2.Standard'));
                                         @endphp
                                         <table class="table table-sm">
                                             <tr>
