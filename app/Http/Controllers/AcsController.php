@@ -1023,9 +1023,18 @@ class AcsController extends Controller
             
             $testType = $request->input('test_type');
             
+            $diagnosticTypeMap = [
+                'ping' => 'IPPing',
+                'traceroute' => 'TraceRoute',
+                'download' => 'DownloadDiagnostics',
+                'upload' => 'UploadDiagnostics',
+            ];
+            
+            $diagnosticType = $diagnosticTypeMap[$testType] ?? $testType;
+            
             $diagnostic = \App\Models\DiagnosticTest::create([
                 'cpe_device_id' => $device->id,
-                'diagnostic_type' => $testType,
+                'diagnostic_type' => $diagnosticType,
                 'status' => 'pending',
                 'parameters' => $request->except(['_token', 'test_type']),
             ]);
