@@ -14,6 +14,16 @@ use App\Http\Controllers\AlarmsController;
 
 require __DIR__.'/auth.php';
 
+// Health check endpoint for load balancers/Docker
+Route::get('/health', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        return response('OK', 200)->header('Content-Type', 'text/plain');
+    } catch (\Exception $e) {
+        return response('UNHEALTHY', 503)->header('Content-Type', 'text/plain');
+    }
+});
+
 // Home - Redirect to Dashboard
 Route::get('/', function () {
     return redirect()->route('acs.dashboard');
