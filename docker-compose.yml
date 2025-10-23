@@ -96,6 +96,7 @@ services:
       # Cache
       CACHE_STORE: redis
       SESSION_DRIVER: redis
+      SESSION_CONNECTION: session
       QUEUE_CONNECTION: redis
       
       # XMPP

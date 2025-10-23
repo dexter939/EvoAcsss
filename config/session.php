@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'driver' => 'database', // Forced to database for Replit environment
+    'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -73,7 +73,9 @@ return [
     |
     */
 
-    'connection' => env('SESSION_CONNECTION', 'session'),
+    'connection' => env('SESSION_CONNECTION', 
+        env('SESSION_DRIVER', 'database') === 'redis' ? 'session' : null
+    ),
 
     /*
     |--------------------------------------------------------------------------
