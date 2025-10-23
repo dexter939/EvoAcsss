@@ -65,6 +65,7 @@ Route::prefix('acs')->name('acs.')->middleware('auth')->group(function () {
     Route::get('/devices/{id}/network-map', [AcsController::class, 'networkMap'])->name('devices.network-map');
     Route::post('/devices/{id}/trigger-network-scan', [AcsController::class, 'triggerNetworkScan'])->name('devices.trigger-network-scan');
     Route::post('/devices/{id}/assign-service', [AcsController::class, 'assignDeviceToService'])->name('devices.assign-service');
+    Route::post('/devices/{id}/assign-data-model', [AcsController::class, 'assignDataModel'])->name('devices.assign-data-model');
     
     // NAT Traversal: Pending Commands Management
     Route::post('/pending-commands/{id}/retry', [AcsController::class, 'retryPendingCommand'])->name('pending-commands.retry');

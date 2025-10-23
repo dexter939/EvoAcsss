@@ -1078,8 +1078,9 @@ class AcsController extends Controller
             ->get();
         
         $activeProfiles = ConfigurationProfile::where('is_active', true)->get();
+        $dataModels = \App\Models\TR069DataModel::where('is_active', true)->orderBy('vendor')->orderBy('model_name')->get();
         
-        return view('acs.device-detail', compact('device', 'recentTasks', 'activeProfiles', 'pendingCommands'));
+        return view('acs.device-detail', compact('device', 'recentTasks', 'activeProfiles', 'pendingCommands', 'dataModels'));
     }
     
     /**
@@ -2366,6 +2367,32 @@ class AcsController extends Controller
                 'command_type' => $command->command_type,
                 'status' => $command->status
             ]
+        ]);
+    }
+    
+    /**
+     * Assegna un Data Model a un dispositivo
+     * Assign a Data Model to a device
+     */
+    public function assignDataModel(Request $request, $id)
+    {
+        $request->validate([
+            'data_model_id' => 'required|exists:tr069_data_models,id'
+        ]);
+        
+        $device = CpeDevice::findOrFail($id);
+        $device->data_model_id = $request->data_model_id;
+        $device->save();
+        
+        \Log::info('Data Model assigned to device', [
+            'device_id' => $device->id,
+            'serial_number' => $device->serial_number,
+            'data_model_id' => $request->data_model_id
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Data Model assegnato con successo'
         ]);
     }
 }

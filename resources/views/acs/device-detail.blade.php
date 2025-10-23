@@ -197,6 +197,22 @@
                                                 <td class="text-xs font-weight-bold border-0">{{ $device->hardware_version ?? 'N/A' }}</td>
                                             </tr>
                                             <tr>
+                                                <td class="text-xs text-secondary border-0">Data Model</td>
+                                                <td class="text-xs font-weight-bold border-0">
+                                                    @if($device->dataModel)
+                                                        <span class="badge bg-gradient-success">{{ $device->dataModel->vendor }} {{ $device->dataModel->model_name }}</span>
+                                                        <button class="btn btn-xs btn-link p-0 ms-1" onclick="openDataModelModal()" title="Cambia Data Model">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                    @else
+                                                        <span class="text-muted">Non assegnato</span>
+                                                        <button class="btn btn-xs btn-primary ms-2" onclick="openDataModelModal()">
+                                                            <i class="fas fa-plus me-1"></i>Assegna
+                                                        </button>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                            <tr>
                                                 <td class="text-xs text-secondary border-0">Profilo Config.</td>
                                                 <td class="text-xs font-weight-bold border-0">
                                                     @if($device->configurationProfile)
@@ -1081,6 +1097,46 @@
     </div>
 </div>
 
+<!-- Modal Assign Data Model -->
+<div class="modal fade" id="dataModelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assegna Data Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i><strong>Data Model Corrente:</strong> 
+                    @if($device->dataModel)
+                        {{ $device->dataModel->vendor }} {{ $device->dataModel->model_name }} ({{ $device->dataModel->spec_name ?? 'N/A' }})
+                    @else
+                        Nessuno
+                    @endif
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Seleziona Data Model *</label>
+                    <select class="form-select" id="dataModelSelect">
+                        <option value="">-- Seleziona --</option>
+                        @foreach($dataModels as $dm)
+                        <option value="{{ $dm->id }}" {{ $device->data_model_id == $dm->id ? 'selected' : '' }}>
+                            {{ $dm->vendor }} - {{ $dm->model_name }} ({{ $dm->protocol_version }})
+                        </option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">
+                        Il Data Model definisce la struttura dei parametri TR-069/TR-181 supportati dal dispositivo
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-success" onclick="submitDataModel()">Assegna Data Model</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -1368,6 +1424,41 @@ async function cancelPendingCommand(commandId) {
         
         const result = await response.json();
         if (result.success) {
+            location.reload();
+        } else {
+            alert('Errore: ' + (result.message || 'Operazione fallita'));
+        }
+    } catch (error) {
+        alert('Errore di rete: ' + error.message);
+    }
+}
+
+function openDataModelModal() {
+    new bootstrap.Modal(document.getElementById('dataModelModal')).show();
+}
+
+async function submitDataModel() {
+    const dataModelId = document.getElementById('dataModelSelect').value;
+    
+    if (!dataModelId) {
+        alert('Seleziona un Data Model');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/acs/devices/${deviceId}/assign-data-model`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ data_model_id: dataModelId })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('dataModelModal')).hide();
+            alert('Data Model assegnato con successo!');
             location.reload();
         } else {
             alert('Errore: ' + (result.message || 'Operazione fallita'));
