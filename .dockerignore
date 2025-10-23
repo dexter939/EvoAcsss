@@ -1,0 +1,79 @@
+# ACS Docker Build Ignore
+# Optimize build context size
+
+# Git
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+docker/
+
+# Documentation
+*.md
+README.md
+CHANGELOG.md
+DEPLOYMENT.md
+LICENSE
+
+# Tests
+tests/
+phpunit.xml
+.phpunit.result.cache
+coverage/
+
+# Development
+.env
+.env.*
+!.env.example
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Storage & Cache
+storage/app/*
+!storage/app/.gitignore
+storage/framework/cache/*
+!storage/framework/cache/.gitignore
+storage/framework/sessions/*
+!storage/framework/sessions/.gitignore
+storage/framework/views/*
+!storage/framework/views/.gitignore
+storage/logs/*
+!storage/logs/.gitignore
+bootstrap/cache/*
+!bootstrap/cache/.gitignore
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.log
+
+# Backups
+*.sql
+*.sql.gz
+*.dump
+backup/
+
+# CI/CD
+.travis.yml
+.gitlab-ci.yml
+.circleci/
+
+# Other
+vendor/bin/
+.phpstorm.meta.php
+_ide_helper.php
