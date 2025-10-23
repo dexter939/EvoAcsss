@@ -21,7 +21,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Production Deployment Infrastructure**: Complete multi-tier deployment strategy:
   - **Docker/Compose**: Multi-stage Dockerfile, docker-compose orchestration (ACS app, PostgreSQL, Redis, Prosody XMPP, Nginx), production nginx configuration with SSL/TLS and rate limiting, automated deployment scripts (deploy.sh, backup.sh, restore.sh), health check endpoints, Makefile for operational commands, DEPLOYMENT.md guide. Network isolation with internal-only database/cache access. PRODUCTION-NOTES.md documents HA requirements.
   - **Kubernetes**: Production-grade Helm chart for carrier-grade deployments (100K+ devices) with HPA (3-20 app pods, 5-50 workers), StatefulSets for dev/staging, managed service integration (RDS PostgreSQL, ElastiCache Redis), NetworkPolicies for security, ServiceMonitor for Prometheus, Ingress with TLS, comprehensive resource limits, deploy-k8s.sh automation script, and KUBERNETES.md deployment guide. Chart enforces managed services for production HA.
-- **Telemetry & Observability**: Automated metrics collection, RESTful Telemetry API, PostgreSQL persistence, and comprehensive monitoring dashboards.
+- **Monitoring & Observability**: Carrier-grade monitoring infrastructure with Prometheus metrics exporter (15+ custom ACS metrics), Grafana dashboards (ACS Overview), PrometheusRule with 10+ alert definitions (critical/warning levels), AlertManager configuration for multi-channel notifications (email, Slack, PagerDuty), ServiceMonitor for Kubernetes auto-discovery, docker-compose.monitoring.yml for local testing, Redis DB 3 for metrics storage, and comprehensive MONITORING.md guide. Metrics cover devices, TR-069/TR-369 sessions, queue performance, alarms, database connections, and cache hit ratios.
 - **Software Auto-Update System**: Carrier-grade automatic deployment tracking, environment-aware versioning, transactional failure handling with rollback, 5-stage health checks, and a GitHub Releases-based system with a web dashboard.
 - **Test Infrastructure**: Comprehensive test suite with 5 Fake Services (FakeUspMqttService, FakeUspWebSocketService, FakeUpnpDiscoveryService, FakeParameterDiscoveryService, FakeConnectionRequestService) registered globally in TestCase::setUp() to isolate external dependencies. All Feature tests free from Mockery usage, ensuring deterministic test execution without real network calls to MQTT brokers, WebSocket servers, or HTTP endpoints. Unit tests with complex Mockery marked as @group skip for future refactoring.
 
@@ -43,7 +43,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 
 # External Dependencies
 - **PostgreSQL 16+**: Primary relational database.
-- **Redis 7+**: Queue driver for Laravel Horizon and WebSocket message routing.
+- **Redis 7+**: Queue driver for Laravel Horizon, WebSocket message routing, and Prometheus metrics storage (DB 0: default, DB 1: cache, DB 2: session, DB 3: metrics).
 - **Laravel Horizon**: Manages Redis queues.
 - **Guzzle**: HTTP client.
 - **Google Protocol Buffers v4.32.1**: For TR-369 USP message encoding/decoding.
@@ -51,9 +51,13 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Prosody XMPP Server**: For TR-369 USP XMPP transport.
 - **pdahal/php-xmpp v1.0.1**: PHP XMPP client library.
 - **stomp-php/stomp-php v5.1.3**: Production STOMP client for TR-262 implementation with support for ActiveMQ, RabbitMQ, Apollo, Artemis brokers.
+- **promphp/prometheus_client_php v2.14.1**: Prometheus metrics exporter for PHP with Redis storage adapter.
 - **Soft UI Dashboard**: Laravel template for the admin interface.
 - **Chart.js**: JavaScript library for interactive charts.
 - **FontAwesome**: Icon library.
 - **Nginx**: Production web server and reverse proxy.
 - **Supervisor/Systemd**: Process management.
 - **OpenAI**: For AI-powered configuration and diagnostics.
+- **Prometheus**: Time-series metrics database (monitoring stack).
+- **Grafana**: Visualization and dashboarding platform (monitoring stack).
+- **AlertManager**: Alert routing and notification system (monitoring stack).

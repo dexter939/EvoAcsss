@@ -736,13 +736,111 @@ kubectl top nodes
 # Adjust resources based on metrics
 ```
 
+## Monitoring Setup
+
+ACS includes comprehensive Prometheus metrics and Grafana dashboards for carrier-grade observability.
+
+### Install Prometheus Operator
+
+```bash
+# Add Prometheus Community Helm repo
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+# Install kube-prometheus-stack
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --create-namespace \
+  --set prometheus.prometheusSpec.retention=30d \
+  --set prometheus.prometheusSpec.resources.requests.cpu=1 \
+  --set prometheus.prometheusSpec.resources.requests.memory=4Gi
+```
+
+### Deploy ACS Monitoring
+
+```bash
+# Apply ServiceMonitor (scrapes /metrics endpoint)
+kubectl apply -f monitoring/prometheus/servicemonitor.yaml
+
+# Apply PrometheusRule (alert rules)
+kubectl apply -f monitoring/prometheus/prometheusrule.yaml
+```
+
+### Access Grafana
+
+```bash
+# Get Grafana admin password
+kubectl get secret -n monitoring prometheus-grafana \
+  -o jsonpath="{.data.admin-password}" | base64 --decode
+
+# Port-forward Grafana
+kubectl port-forward -n monitoring svc/prometheus-grafana 3000:80
+
+# Open browser to http://localhost:3000
+# Import dashboard: monitoring/grafana/dashboards/acs-overview.json
+```
+
+### Available Metrics
+
+ACS exposes the following custom metrics at `/metrics`:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `acs_devices_total` | Gauge | Total number of CPE devices |
+| `acs_devices_online` | Gauge | Number of online devices |
+| `acs_devices_offline` | Gauge | Number of offline devices |
+| `acs_devices_by_status{status}` | Gauge | Devices grouped by status |
+| `acs_devices_by_vendor{vendor}` | Gauge | Devices grouped by vendor |
+| `acs_devices_by_protocol{protocol}` | Gauge | Devices by protocol (TR-069/TR-369) |
+| `acs_tr069_active_sessions` | Gauge | Active TR-069 sessions |
+| `acs_queue_jobs_pending{queue}` | Gauge | Pending jobs by queue |
+| `acs_queue_jobs_failed{queue}` | Gauge | Failed jobs by queue |
+| `acs_queue_jobs_failed_total` | Gauge | Total failed jobs |
+| `acs_alarms_active` | Gauge | Number of active alarms |
+| `acs_alarms_critical` | Gauge | Number of critical alarms |
+| `acs_alarms_by_severity{severity}` | Gauge | Alarms by severity level |
+| `acs_database_connections` | Gauge | PostgreSQL connection count |
+| `acs_cache_hit_ratio` | Gauge | Redis cache hit ratio (%) |
+
+### Alert Rules
+
+Pre-configured alerts in `monitoring/prometheus/prometheusrule.yaml`:
+
+**Critical Alerts:**
+- `CriticalDeviceOfflineRate` - >50% devices offline
+- `NoDevicesOnline` - All devices offline
+- `CriticalQueueBacklog` - >5000 pending jobs
+- `ExcessiveFailedJobs` - >100 failed jobs
+
+**Warning Alerts:**
+- `HighDeviceOfflineRate` - >20% devices offline
+- `HighQueueBacklog` - >1000 pending jobs
+- `HighCriticalAlarms` - >10 critical alarms
+- `LowCacheHitRatio` - <70% cache hit rate
+
+### Local Testing
+
+Test monitoring stack locally with Docker Compose:
+
+```bash
+# Start monitoring services
+docker-compose -f docker-compose.monitoring.yml up -d
+
+# Access services
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000
+- AlertManager: http://localhost:9093
+```
+
+For detailed monitoring setup, see [MONITORING.md](MONITORING.md).
+
 ## Support
 
 For issues or questions:
 - Check logs: `./deploy-k8s.sh logs <component>`
 - Review events: `kubectl get events -n acs-production`
 - Check pod status: `kubectl get pods -n acs-production`
-- Consult documentation: [DEPLOYMENT.md](DEPLOYMENT.md)
+- Consult documentation: [DEPLOYMENT.md](DEPLOYMENT.md), [MONITORING.md](MONITORING.md)
 
 ## References
 
