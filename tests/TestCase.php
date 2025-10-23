@@ -4,6 +4,10 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Fakes\FakeUspMqttService;
+use Tests\Fakes\FakeUspWebSocketService;
+use App\Services\UspMqttService;
+use App\Services\UspWebSocketService;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -17,6 +21,15 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
         
         $this->withoutVite();
+        
+        // Replace real USP services with fakes to avoid actual MQTT/WebSocket connections
+        $this->app->singleton(UspMqttService::class, function ($app) {
+            return new FakeUspMqttService();
+        });
+        
+        $this->app->singleton(UspWebSocketService::class, function ($app) {
+            return new FakeUspWebSocketService();
+        });
     }
 
     /**

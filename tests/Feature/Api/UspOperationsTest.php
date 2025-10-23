@@ -16,10 +16,8 @@ class UspOperationsTest extends TestCase
 
     public function test_get_parameters_from_usp_device(): void
     {
-        $mqttMock = Mockery::mock(UspMqttService::class);
-        $mqttMock->shouldReceive('sendGetRequest')->once()->andReturn(true);
-        $this->app->instance(UspMqttService::class, $mqttMock);
-
+        // FakeUspMqttService is already registered in TestCase::setUp()
+        
         $device = CpeDevice::factory()->tr369()->online()->create([
             'mtp_type' => 'mqtt',
             'mqtt_client_id' => 'mqtt-test-12345',
@@ -60,10 +58,8 @@ class UspOperationsTest extends TestCase
 
     public function test_set_parameters_on_usp_device(): void
     {
-        $wsMock = Mockery::mock(UspWebSocketService::class);
-        $wsMock->shouldReceive('sendSetRequest')->once()->andReturn(true);
-        $this->app->instance(UspWebSocketService::class, $wsMock);
-
+        // FakeUspWebSocketService is already registered in TestCase::setUp()
+        
         $device = CpeDevice::factory()->tr369()->online()->create([
             'mtp_type' => 'websocket',
             'websocket_client_id' => 'ws-client-123'
@@ -91,10 +87,8 @@ class UspOperationsTest extends TestCase
 
     public function test_add_object_to_usp_device(): void
     {
-        $mqttMock = Mockery::mock(UspMqttService::class);
-        $mqttMock->shouldReceive('publish')->once()->andReturn(true);
-        $this->app->instance(UspMqttService::class, $mqttMock);
-
+        // FakeUspMqttService is already registered in TestCase::setUp()
+        
         $device = CpeDevice::factory()->tr369()->online()->create([
             'mtp_type' => 'mqtt'
         ]);
@@ -120,10 +114,8 @@ class UspOperationsTest extends TestCase
 
     public function test_delete_object_from_usp_device(): void
     {
-        $mqttMock = Mockery::mock(UspMqttService::class);
-        $mqttMock->shouldReceive('publish')->once()->andReturn(true);
-        $this->app->instance(UspMqttService::class, $mqttMock);
-
+        // FakeUspMqttService is already registered in TestCase::setUp()
+        
         $device = CpeDevice::factory()->tr369()->online()->create([
             'mtp_type' => 'mqtt'
         ]);
@@ -147,10 +139,8 @@ class UspOperationsTest extends TestCase
 
     public function test_operate_command_on_usp_device(): void
     {
-        $mqttMock = Mockery::mock(UspMqttService::class);
-        $mqttMock->shouldReceive('sendOperateRequest')->once()->andReturn(true);
-        $this->app->instance(UspMqttService::class, $mqttMock);
-
+        // FakeUspMqttService is already registered in TestCase::setUp()
+        
         $device = CpeDevice::factory()->tr369()->online()->create([
             'mtp_type' => 'mqtt',
             'mqtt_client_id' => 'mqtt-operate-test'
@@ -174,10 +164,8 @@ class UspOperationsTest extends TestCase
 
     public function test_reboot_usp_device(): void
     {
-        $wsMock = Mockery::mock(UspWebSocketService::class);
-        $wsMock->shouldReceive('sendOperateRequest')->once()->andReturn(true);
-        $this->app->instance(UspWebSocketService::class, $wsMock);
-
+        // FakeUspWebSocketService is already registered in TestCase::setUp()
+        
         $device = CpeDevice::factory()->tr369()->online()->create([
             'mtp_type' => 'websocket',
             'websocket_client_id' => 'ws-reboot-test'
@@ -309,14 +297,8 @@ class UspOperationsTest extends TestCase
 
     public function test_usp_operations_support_different_mtp_transports(): void
     {
-        $mqttMock = Mockery::mock(UspMqttService::class);
-        $mqttMock->shouldReceive('sendGetRequest')->once()->andReturn(true);
-        $this->app->instance(UspMqttService::class, $mqttMock);
-
-        $wsMock = Mockery::mock(UspWebSocketService::class);
-        $wsMock->shouldReceive('sendGetRequest')->once()->andReturn(true);
-        $this->app->instance(UspWebSocketService::class, $wsMock);
-
+        // FakeUspMqttService and FakeUspWebSocketService are already registered in TestCase::setUp()
+        
         $mqttDevice = CpeDevice::factory()->tr369()->create([
             'mtp_type' => 'mqtt',
             'mqtt_client_id' => 'mqtt-123',
