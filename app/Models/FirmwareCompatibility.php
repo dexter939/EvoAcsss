@@ -7,6 +7,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FirmwareCompatibility extends Model
 {
+    /**
+     * Valid compatibility statuses
+     */
+    public const STATUS_COMPATIBLE = 'compatible';
+    public const STATUS_COMPATIBLE_WITH_ISSUES = 'compatible_with_issues';
+    public const STATUS_INCOMPATIBLE = 'incompatible';
+    public const STATUS_UNTESTED = 'untested';
+    public const STATUS_BETA = 'beta';
+    
+    public const COMPATIBILITY_STATUSES = [
+        self::STATUS_COMPATIBLE,
+        self::STATUS_COMPATIBLE_WITH_ISSUES,
+        self::STATUS_INCOMPATIBLE,
+        self::STATUS_UNTESTED,
+        self::STATUS_BETA
+    ];
+
     protected $table = 'firmware_compatibility_matrix';
 
     protected $fillable = [

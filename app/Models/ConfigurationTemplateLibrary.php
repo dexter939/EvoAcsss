@@ -7,6 +7,40 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ConfigurationTemplateLibrary extends Model
 {
+    /**
+     * Valid template categories
+     */
+    public const CATEGORY_SECURITY = 'security';
+    public const CATEGORY_QOS = 'qos';
+    public const CATEGORY_VOIP = 'voip';
+    public const CATEGORY_WIFI = 'wifi';
+    public const CATEGORY_BASIC = 'basic';
+    public const CATEGORY_ADVANCED = 'advanced';
+    
+    public const CATEGORIES = [
+        self::CATEGORY_SECURITY,
+        self::CATEGORY_QOS,
+        self::CATEGORY_VOIP,
+        self::CATEGORY_WIFI,
+        self::CATEGORY_BASIC,
+        self::CATEGORY_ADVANCED
+    ];
+
+    /**
+     * Valid protocols
+     */
+    public const PROTOCOL_TR069 = 'TR-069';
+    public const PROTOCOL_TR369 = 'TR-369';
+    public const PROTOCOL_TR104 = 'TR-104';
+    public const PROTOCOL_TR181 = 'TR-181';
+    
+    public const PROTOCOLS = [
+        self::PROTOCOL_TR069,
+        self::PROTOCOL_TR369,
+        self::PROTOCOL_TR104,
+        self::PROTOCOL_TR181
+    ];
+
     protected $table = 'configuration_templates_library';
 
     protected $fillable = [

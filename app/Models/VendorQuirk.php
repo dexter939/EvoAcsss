@@ -7,6 +7,40 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VendorQuirk extends Model
 {
+    /**
+     * Valid severity levels
+     */
+    public const SEVERITY_CRITICAL = 'critical';
+    public const SEVERITY_HIGH = 'high';
+    public const SEVERITY_MEDIUM = 'medium';
+    public const SEVERITY_LOW = 'low';
+    
+    public const SEVERITIES = [
+        self::SEVERITY_CRITICAL,
+        self::SEVERITY_HIGH,
+        self::SEVERITY_MEDIUM,
+        self::SEVERITY_LOW
+    ];
+
+    /**
+     * Valid quirk types
+     */
+    public const TYPE_PARAMETER_NAMING = 'parameter_naming';
+    public const TYPE_TR069_COMPLIANCE = 'tr069_compliance';
+    public const TYPE_PERFORMANCE = 'performance';
+    public const TYPE_CONNECTIVITY = 'connectivity';
+    public const TYPE_SECURITY = 'security';
+    public const TYPE_FIRMWARE = 'firmware';
+    
+    public const QUIRK_TYPES = [
+        self::TYPE_PARAMETER_NAMING,
+        self::TYPE_TR069_COMPLIANCE,
+        self::TYPE_PERFORMANCE,
+        self::TYPE_CONNECTIVITY,
+        self::TYPE_SECURITY,
+        self::TYPE_FIRMWARE
+    ];
+
     protected $fillable = [
         'manufacturer_id',
         'product_id',
