@@ -1044,7 +1044,6 @@ class AcsController extends Controller
                 $repetitions = $request->input('repetitions', 4);
                 
                 $diagnostic->update([
-                    'status' => 'in_progress',
                     'started_at' => now()
                 ]);
                 
@@ -1066,7 +1065,6 @@ class AcsController extends Controller
                 $maxHops = $request->input('max_hops', 30);
                 
                 $diagnostic->update([
-                    'status' => 'in_progress',
                     'started_at' => now()
                 ]);
                 
