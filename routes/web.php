@@ -8,6 +8,7 @@ use App\Http\Controllers\AcsController;
 use App\Http\Controllers\DataModelController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\Acs\VendorLibraryWebController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AlarmsController;
 
@@ -220,4 +221,15 @@ Route::prefix('acs')->name('acs.')->middleware('auth')->group(function () {
     Route::put('/services/{serviceId}', [AcsController::class, 'updateService'])->name('services.update');
     Route::delete('/services/{serviceId}', [AcsController::class, 'destroyService'])->name('services.destroy');
     Route::post('/services/{serviceId}/assign-devices', [AcsController::class, 'assignMultipleDevices'])->name('services.assign-devices');
+    
+    // Vendor Library & Compatibility Matrix
+    Route::prefix('vendors')->name('vendors.')->group(function () {
+        Route::get('/', [VendorLibraryWebController::class, 'index'])->name('index');
+        Route::get('/manufacturers', [VendorLibraryWebController::class, 'manufacturers'])->name('manufacturers');
+        Route::get('/manufacturers/{id}', [VendorLibraryWebController::class, 'manufacturerDetail'])->name('manufacturers.detail');
+        Route::get('/products', [VendorLibraryWebController::class, 'products'])->name('products');
+        Route::get('/products/{id}', [VendorLibraryWebController::class, 'productDetail'])->name('products.detail');
+        Route::get('/quirks', [VendorLibraryWebController::class, 'quirks'])->name('quirks');
+        Route::get('/templates', [VendorLibraryWebController::class, 'templates'])->name('templates');
+    });
 });
