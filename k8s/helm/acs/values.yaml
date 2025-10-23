@@ -1,0 +1,364 @@
+# ACS Helm Chart - Production Values
+# Carrier-grade configuration for 100K+ CPE devices
+
+## Global Configuration
+global:
+  environment: production
+  domain: acs.example.com
+  tr069Port: 7547
+
+## Replication & High Availability
+replicaCount:
+  app: 3          # ACS application pods
+  worker: 5       # Queue worker pods
+  redis: 3        # Redis cluster nodes
+  postgres: 3     # PostgreSQL cluster (if using managed service, set to 0)
+
+## Container Images
+image:
+  app:
+    repository: your-registry/acs
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  nginx:
+    repository: nginx
+    tag: "1.25-alpine"
+    pullPolicy: IfNotPresent
+  postgres:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  redis:
+    repository: redis
+    tag: "7-alpine"
+    pullPolicy: IfNotPresent
+  prosody:
+    repository: prosody/prosody
+    tag: "0.12"
+    pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+## Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "acs-sa"
+
+## ACS Application Configuration
+app:
+  name: acs-app
+  
+  # Resource limits for carrier-grade performance
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  
+  # Autoscaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  # Node affinity (spread across zones)
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - acs-app
+            topologyKey: topology.kubernetes.io/zone
+
+## Queue Workers Configuration
+worker:
+  name: acs-worker
+  
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
+
+## PostgreSQL Configuration
+postgresql:
+  enabled: true  # Set to false if using external/managed PostgreSQL
+  
+  # Use StatefulSet for persistence
+  statefulset:
+    enabled: true
+  
+  resources:
+    requests:
+      cpu: "2000m"
+      memory: "8Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+  
+  persistence:
+    enabled: true
+    storageClass: "fast-ssd"  # Use high-performance storage
+    size: "500Gi"
+  
+  # PostgreSQL configuration
+  auth:
+    database: "acs"
+    username: "acs_user"
+    existingSecret: "acs-secrets"  # Create this secret manually
+    secretKeys:
+      adminPasswordKey: "postgres-password"
+      userPasswordKey: "postgres-user-password"
+  
+  # PostgreSQL tuning for 100K+ devices
+  primary:
+    configuration: |
+      max_connections = 500
+      shared_buffers = 4GB
+      effective_cache_size = 12GB
+      maintenance_work_mem = 1GB
+      work_mem = 8MB
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      wal_buffers = 16MB
+      min_wal_size = 2GB
+      max_wal_size = 8GB
+      max_worker_processes = 8
+      max_parallel_workers_per_gather = 4
+      max_parallel_workers = 8
+
+## Redis Configuration
+redis:
+  enabled: true
+  
+  # Redis Cluster mode for HA
+  cluster:
+    enabled: true
+    slaveCount: 2  # 2 replicas per master
+  
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "1000m"
+      memory: "4Gi"
+  
+  persistence:
+    enabled: true
+    storageClass: "fast-ssd"
+    size: "50Gi"
+  
+  auth:
+    enabled: true
+    existingSecret: "acs-secrets"
+    existingSecretPasswordKey: "redis-password"
+
+## Prosody XMPP Server (for TR-369 USP)
+prosody:
+  enabled: true
+  replicaCount: 2
+  
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  
+  service:
+    type: ClusterIP
+    port: 5222
+
+## Services Configuration
+service:
+  app:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  
+  worker:
+    type: ClusterIP
+    port: 80
+  
+  tr069:
+    type: LoadBalancer
+    port: 7547
+    targetPort: 7547
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # For AWS
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+## Ingress Configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"  # 100 req/sec per IP
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+  
+  hosts:
+    - host: acs.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  
+  tls:
+    - secretName: acs-tls-cert
+      hosts:
+        - acs.example.com
+
+## Persistent Storage
+persistence:
+  storage:
+    storageClass: "fast-ssd"
+    size: "100Gi"
+
+## Network Policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  
+  # Allow ingress only from specific sources
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ingress-nginx
+  
+  # Allow egress to database, cache, and external APIs
+  egress:
+    - to:
+      - podSelector:
+          matchLabels:
+            app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+      - podSelector:
+          matchLabels:
+            app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+
+## Monitoring & Observability
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+## Security
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+## Environment Variables
+env:
+  # Laravel
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_KEY: ""  # Generate with: php artisan key:generate --show
+  
+  # Session
+  SESSION_DRIVER: redis
+  SESSION_CONNECTION: session
+  
+  # Cache
+  CACHE_STORE: redis
+  
+  # Queue
+  QUEUE_CONNECTION: redis
+  
+  # Logging
+  LOG_CHANNEL: stack
+  LOG_LEVEL: warning
+
+## ConfigMap Data
+configData:
+  php.ini: |
+    memory_limit = 512M
+    upload_max_filesize = 64M
+    post_max_size = 64M
+    max_execution_time = 300
+    opcache.enable = 1
+    opcache.memory_consumption = 256
+    opcache.interned_strings_buffer = 16
+    opcache.max_accelerated_files = 20000
+
+## External Services (if not using embedded)
+externalDatabase:
+  enabled: false
+  host: ""
+  port: 5432
+  database: "acs"
+  username: "acs_user"
+  existingSecret: "acs-external-db"
+
+externalRedis:
+  enabled: false
+  host: ""
+  port: 6379
+  existingSecret: "acs-external-redis"
+
+## Node Selectors
+nodeSelector: {}
+
+tolerations: []
+
+## Priority Class
+priorityClassName: "high-priority"

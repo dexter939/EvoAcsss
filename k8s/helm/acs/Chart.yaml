@@ -1,0 +1,21 @@
+apiVersion: v2
+name: acs
+description: Carrier-Grade Auto Configuration Server for TR-069/TR-369 CPE Management
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - acs
+  - tr-069
+  - tr-369
+  - cwmp
+  - usp
+  - cpe-management
+  - telecom
+maintainers:
+  - name: ACS Team
+    email: support@acs.local
+home: https://github.com/your-org/acs
+sources:
+  - https://github.com/your-org/acs
+dependencies: []
