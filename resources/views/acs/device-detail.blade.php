@@ -365,7 +365,9 @@
                                         <h6><i class="fas fa-chart-area me-2"></i>Performance Trends (Last 24h)</h6>
                                     </div>
                                     <div class="card-body">
-                                        <canvas id="performanceChart" height="80"></canvas>
+                                        <div style="position: relative; height: 300px;">
+                                            <canvas id="performanceChart"></canvas>
+                                        </div>
                                         <p class="text-xs text-muted text-center mt-3">
                                             <i class="fas fa-info-circle me-1"></i>Grafico delle performance del dispositivo nelle ultime 24 ore
                                         </p>
