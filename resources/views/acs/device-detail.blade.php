@@ -1068,14 +1068,20 @@
                 <h5 class="modal-title" id="diagnosticModalTitle">Diagnostic Test</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="diagnosticForm">
+            <form id="diagnosticForm" onsubmit="submitDiagnosticTest(event, {{ $device->id }})">
                 @csrf
                 <div class="modal-body">
                     <div id="diagnosticFormFields"></div>
+                    <div id="diagnosticTestResult" class="alert alert-info mt-3" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            <span>Test diagnostico in esecuzione...</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                    <button type="submit" class="btn btn-primary">Avvia Test</button>
+                    <button type="submit" class="btn btn-primary" id="diagnosticSubmitBtn">Avvia Test</button>
                 </div>
             </form>
         </div>
@@ -1332,7 +1338,80 @@ function openDiagnosticModal(type, deviceId) {
     title.textContent = config.title;
     fields.innerHTML = config.fields + `<input type="hidden" name="test_type" value="${type}">`;
     
+    document.getElementById('diagnosticTestResult').style.display = 'none';
     new bootstrap.Modal(modal).show();
+}
+
+async function submitDiagnosticTest(event, deviceId) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('diagnosticSubmitBtn');
+    const resultDiv = document.getElementById('diagnosticTestResult');
+    
+    submitBtn.disabled = true;
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'alert alert-info mt-3';
+    resultDiv.innerHTML = '<div class="d-flex align-items-center"><i class="fas fa-spinner fa-spin me-2"></i><span>Test diagnostico in esecuzione...</span></div>';
+    
+    try {
+        const response = await fetch(`/acs/devices/${deviceId}/diagnostics`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            resultDiv.className = 'alert alert-success mt-3';
+            resultDiv.innerHTML = `
+                <h6 class="mb-2"><i class="fas fa-check-circle me-2"></i>Test completato con successo</h6>
+                ${result.message ? `<p class="mb-2 text-sm">${result.message}</p>` : ''}
+                ${result.result ? `<pre class="mb-0 p-2 bg-white rounded text-xs">${result.result}</pre>` : ''}
+            `;
+            
+            setTimeout(() => {
+                loadDiagnosticHistory(deviceId);
+            }, 2000);
+        } else {
+            resultDiv.className = 'alert alert-warning mt-3';
+            resultDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${result.message || 'Test diagnostico avviato ma il risultato potrebbe richiedere del tempo'}`;
+        }
+    } catch (error) {
+        resultDiv.className = 'alert alert-danger mt-3';
+        resultDiv.innerHTML = `<i class="fas fa-times-circle me-2"></i>Errore: ${error.message}`;
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+async function loadDiagnosticHistory(deviceId) {
+    try {
+        const response = await fetch(`/acs/devices/${deviceId}/diagnostics/history`);
+        const result = await response.json();
+        
+        const historyDiv = document.getElementById('diagnostic-history');
+        if (result.tests && result.tests.length > 0) {
+            historyDiv.innerHTML = result.tests.map(test => `
+                <div class="border-bottom py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-sm">${test.test_type.toUpperCase()}</strong>
+                            <span class="badge bg-gradient-${test.status === 'completed' ? 'success' : (test.status === 'failed' ? 'danger' : 'warning')} ms-2">${test.status}</span>
+                        </div>
+                        <small class="text-muted">${test.created_at}</small>
+                    </div>
+                    ${test.result ? `<pre class="text-xs mt-2 mb-0 p-2 bg-light rounded">${test.result}</pre>` : ''}
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading diagnostic history:', error);
+    }
 }
 
 async function aiAnalyzeDeviceHistory(deviceId) {

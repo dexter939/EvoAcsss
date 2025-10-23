@@ -61,6 +61,8 @@ Route::prefix('acs')->name('acs.')->middleware('auth')->group(function () {
     Route::post('/devices/{id}/reboot', [AcsController::class, 'rebootDevice'])->name('devices.reboot');
     Route::post('/devices/{id}/connection-request', [AcsController::class, 'connectionRequest'])->name('devices.connection-request');
     Route::post('/devices/{id}/diagnostics/{type}', [AcsController::class, 'runDiagnostic'])->name('devices.diagnostic');
+    Route::post('/devices/{id}/diagnostics', [AcsController::class, 'runDiagnosticTest'])->name('devices.diagnostics.run');
+    Route::get('/devices/{id}/diagnostics/history', [AcsController::class, 'getDiagnosticHistory'])->name('devices.diagnostics.history');
     Route::get('/diagnostics/{id}/results', [AcsController::class, 'getDiagnosticResults'])->name('diagnostics.results');
     Route::get('/devices/{id}/network-map', [AcsController::class, 'networkMap'])->name('devices.network-map');
     Route::post('/devices/{id}/trigger-network-scan', [AcsController::class, 'triggerNetworkScan'])->name('devices.trigger-network-scan');

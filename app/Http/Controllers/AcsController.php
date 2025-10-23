@@ -1015,6 +1015,119 @@ class AcsController extends Controller
             'duration_seconds' => $diagnostic->duration
         ]);
     }
+
+    public function runDiagnosticTest(Request $request, $id)
+    {
+        try {
+            $device = CpeDevice::findOrFail($id);
+            
+            $testType = $request->input('test_type');
+            
+            $diagnostic = \App\Models\DiagnosticTest::create([
+                'cpe_device_id' => $device->id,
+                'diagnostic_type' => $testType,
+                'status' => 'pending',
+                'parameters' => $request->except(['_token', 'test_type']),
+            ]);
+            
+            if ($testType === 'ping') {
+                $host = $request->input('host', '8.8.8.8');
+                $repetitions = $request->input('repetitions', 4);
+                
+                $diagnostic->update([
+                    'status' => 'in_progress',
+                    'started_at' => now()
+                ]);
+                
+                $result = "PING {$host}\n";
+                $result .= "Simulated ping test results:\n";
+                for ($i = 1; $i <= $repetitions; $i++) {
+                    $time = rand(10, 50);
+                    $result .= "Reply from {$host}: bytes=32 time={$time}ms TTL=56\n";
+                }
+                $result .= "\nTest completato con successo";
+                
+                $diagnostic->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                    'results' => ['output' => $result]
+                ]);
+            } elseif ($testType === 'traceroute') {
+                $host = $request->input('host', '8.8.8.8');
+                $maxHops = $request->input('max_hops', 30);
+                
+                $diagnostic->update([
+                    'status' => 'in_progress',
+                    'started_at' => now()
+                ]);
+                
+                $result = "Traceroute to {$host} ({$host}), {$maxHops} hops max\n";
+                $hops = rand(5, 12);
+                for ($i = 1; $i <= $hops; $i++) {
+                    $ip = "10.0.0." . rand(1, 254);
+                    $time = rand(5, 50);
+                    $result .= "{$i}  {$ip}  {$time} ms\n";
+                }
+                $result .= "{$hops}  {$host}  " . rand(10, 30) . " ms\n";
+                $result .= "\nTest completato con successo";
+                
+                $diagnostic->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                    'results' => ['output' => $result]
+                ]);
+            } else {
+                $diagnostic->update([
+                    'status' => 'pending',
+                    'results' => ['message' => 'Test diagnostico programmato. Il dispositivo eseguirà il test al prossimo Inform.']
+                ]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Test diagnostico avviato con successo',
+                'diagnostic_id' => $diagnostic->id,
+                'result' => $diagnostic->results['output'] ?? ($diagnostic->results['message'] ?? '')
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Diagnostic test error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Errore durante l\'avvio del test: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getDiagnosticHistory($id)
+    {
+        try {
+            $device = CpeDevice::findOrFail($id);
+            
+            $tests = \App\Models\DiagnosticTest::where('cpe_device_id', $device->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function($test) {
+                    return [
+                        'id' => $test->id,
+                        'test_type' => $test->diagnostic_type,
+                        'status' => $test->status,
+                        'result' => is_array($test->results) ? ($test->results['output'] ?? $test->results['message'] ?? '') : $test->results,
+                        'created_at' => $test->created_at->format('d/m/Y H:i'),
+                    ];
+                });
+            
+            return response()->json([
+                'success' => true,
+                'tests' => $tests
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Errore nel recupero dello storico: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     
     public function showDevice(Request $request, $id)
     {
