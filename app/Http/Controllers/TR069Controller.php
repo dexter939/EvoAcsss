@@ -8,6 +8,7 @@ use App\Models\ProvisioningTask;
 use App\Services\TR069SessionManager;
 use App\Services\TR069Service;
 use App\Services\DataModelMatcher;
+use App\Services\Vendor\VendorDetectionService;
 use Carbon\Carbon;
 
 /**
@@ -178,6 +179,17 @@ class TR069Controller extends Controller
             );
             
             \Log::info('Device registered/updated', ['serial' => $serialNumber, 'id' => $device->id]);
+            
+            // VENDOR AUTO-DETECTION: Auto-detect manufacturer and product from DeviceInfo
+            $vendorDetection = new VendorDetectionService();
+            $deviceInfo = [
+                'Manufacturer' => $manufacturer,
+                'ModelName' => $productClass,
+                'ManufacturerOUI' => $oui,
+                'SoftwareVersion' => $softwareVersion,
+                'HardwareVersion' => $hardwareVersion
+            ];
+            $vendorDetection->updateCpeDeviceVendor($device, $deviceInfo);
             
             // AUTO-MAPPING DATA MODEL: Se il dispositivo non ha un data model assegnato,
             // trova automaticamente il data model più appropriato
