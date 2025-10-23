@@ -498,4 +498,64 @@ class VendorLibraryBulkOperationsTest extends TestCase
                 'errors'
             ]);
     }
+
+    public function test_bulk_apply_template_updates_usage_count_correctly(): void
+    {
+        $device1 = CpeDevice::factory()->create([
+            'manufacturer' => $this->manufacturer->name,
+            'protocol_type' => 'tr069'
+        ]);
+
+        $device2 = CpeDevice::factory()->create([
+            'manufacturer' => $this->manufacturer->name,
+            'protocol_type' => 'tr069'
+        ]);
+
+        $template = ConfigurationTemplateLibrary::create([
+            'manufacturer_id' => $this->manufacturer->id,
+            'template_name' => 'Usage Count Test',
+            'template_category' => 'basic',
+            'protocol' => 'TR-069',
+            'template_content' => ['test' => 'data'],
+            'usage_count' => 5
+        ]);
+
+        $response = $this->apiPost('/api/v1/vendors/bulk/apply-template', [
+            'device_ids' => [$device1->id, $device2->id],
+            'template_id' => $template->id,
+            'dry_run' => false
+        ]);
+
+        $response->assertStatus(200);
+
+        // Verify usage count incremented by 2 (one per device)
+        $template->refresh();
+        $this->assertEquals(7, $template->usage_count);
+    }
+
+    public function test_bulk_detect_vendor_handles_large_batch_size(): void
+    {
+        // Create 50 devices to test batch processing
+        $deviceIds = [];
+        for ($i = 0; $i < 50; $i++) {
+            $device = CpeDevice::factory()->create([
+                'manufacturer' => 'TP-Link',
+                'model_name' => 'Archer C7',
+                'oui' => 'F4F26D'
+            ]);
+            $deviceIds[] = $device->id;
+        }
+
+        $response = $this->apiPost('/api/v1/vendors/bulk/detect', [
+            'device_ids' => $deviceIds
+        ]);
+
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals(50, $data['processed']);
+        $this->assertArrayHasKey('success_count', $data);
+        $this->assertArrayHasKey('failure_count', $data);
+        $this->assertCount(50, $data['results']);
+    }
 }
