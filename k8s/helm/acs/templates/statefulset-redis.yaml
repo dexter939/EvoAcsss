@@ -1,4 +1,15 @@
 {{- if .Values.redis.enabled }}
+# ⚠️  WARNING: This StatefulSet is for DEVELOPMENT/STAGING ONLY
+# For CARRIER-GRADE PRODUCTION (100K+ devices):
+# - Use managed Redis (ElastiCache, Memorystore, Azure Cache)
+# - Or deploy with Redis Sentinel/Enterprise Operator for HA
+# 
+# This basic StatefulSet does NOT provide:
+# - Automatic failover
+# - Master/replica replication
+# - Sentinel monitoring
+# - Split-brain prevention
+# - Cluster mode
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

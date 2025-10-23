@@ -1,4 +1,15 @@
 {{- if .Values.postgresql.enabled }}
+# ⚠️  WARNING: This StatefulSet is for DEVELOPMENT/STAGING ONLY
+# For CARRIER-GRADE PRODUCTION (100K+ devices):
+# - Use managed PostgreSQL (RDS, Cloud SQL, Azure Database)
+# - Or deploy with Patroni/CrunchyData PostgreSQL Operator for HA
+# 
+# This basic StatefulSet does NOT provide:
+# - Automatic failover
+# - Leader election
+# - Streaming replication
+# - Point-in-time recovery
+# - Automated backups
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

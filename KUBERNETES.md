@@ -6,7 +6,9 @@ This guide provides comprehensive instructions for deploying ACS (Auto Configura
 
 ## Architecture
 
-### Component Overview
+### Carrier-Grade Production Architecture (100K+ devices)
+
+**⚠️ CRITICAL: For production use, you MUST use managed services for PostgreSQL and Redis.**
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -32,11 +34,24 @@ This guide provides comprehensive instructions for deploying ACS (Auto Configura
             │
     ┌───────┴────────┬──────────┬────────┐
     │                │          │        │
-┌───▼────┐    ┌─────▼─────┐  ┌─▼──────┐ ┌──────┐
-│PostgreSQL│   │  Redis    │  │Prosody │ │ PVC  │
-│Cluster  │   │  Cluster  │  │ XMPP   │ │Storage│
-│(3 nodes)│   │(3 nodes)  │  │(2 pods)│ │       │
-└─────────┘    └───────────┘  └────────┘ └──────┘
+┌───▼────────┐ ┌────▼──────┐ ┌─▼──────┐ ┌──────┐
+│ AWS RDS    │ │ElastiCache│ │Prosody │ │ PVC  │
+│PostgreSQL  │ │  Redis    │ │ XMPP   │ │Storage│
+│(Multi-AZ)  │ │ (Cluster) │ │(2 pods)│ │       │
+└────────────┘ └───────────┘ └────────┘ └──────┘
+```
+
+### Development/Staging Architecture
+
+For development and staging environments, the Helm chart includes optional embedded PostgreSQL and Redis StatefulSets. **These are NOT suitable for production carrier-grade deployments.**
+
+```
+Same as above, but with:
+┌────────────┐ ┌────────────┐
+│PostgreSQL  │ │   Redis    │
+│StatefulSet │ │StatefulSet │
+│(1 replica) │ │(1 replica) │
+└────────────┘ └────────────┘
 ```
 
 ### Resource Allocation
@@ -299,7 +314,18 @@ kubectl create secret tls acs-tls-cert \
 
 ### Database Configuration
 
-#### Managed PostgreSQL (Recommended for Production)
+#### Managed PostgreSQL (REQUIRED for Production)
+
+**⚠️ For carrier-grade production with 100K+ devices, you MUST use managed PostgreSQL.**
+
+The embedded PostgreSQL StatefulSet lacks:
+- Automatic failover
+- Leader election & replication
+- Point-in-time recovery
+- Automated backups
+- Split-brain prevention
+
+Supported managed services:
 
 ```yaml
 postgresql:
@@ -314,21 +340,64 @@ externalDatabase:
   existingSecret: "acs-external-db"
 ```
 
-#### Self-Hosted PostgreSQL with Patroni (HA)
+#### AWS RDS PostgreSQL (Recommended)
 
-For production HA, use Patroni:
+```yaml
+postgresql:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  host: "acs-db.abc123.us-east-1.rds.amazonaws.com"
+  port: 5432
+  database: "acs"
+  username: "acs_user"
+  existingSecret: "acs-secrets"
+```
+
+#### Self-Hosted PostgreSQL with Patroni/CrunchyData (Advanced)
+
+If you cannot use managed services, deploy with a production-grade operator:
 
 ```bash
-# Install Patroni Helm chart
-helm repo add patroni https://patroni.io
-helm install postgresql patroni/patroni \
-  --namespace acs-production \
-  --set postgresql.version=16
+# Install CrunchyData PostgreSQL Operator
+kubectl apply -k github.com/CrunchyData/postgres-operator-examples/kustomize/install
+
+# Create PostgreSQL cluster
+kubectl apply -f - <<EOF
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: acs-postgres
+  namespace: acs-production
+spec:
+  postgresVersion: 16
+  instances:
+    - name: instance1
+      replicas: 3
+      dataVolumeClaimSpec:
+        accessModes:
+        - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 500Gi
+EOF
 ```
 
 ### Redis Configuration
 
-#### Managed Redis (Recommended)
+#### Managed Redis (REQUIRED for Production)
+
+**⚠️ For carrier-grade production with 100K+ devices, you MUST use managed Redis.**
+
+The embedded Redis StatefulSet lacks:
+- Automatic failover
+- Master/replica replication
+- Sentinel monitoring
+- Cluster mode
+- Split-brain prevention
+
+Supported managed services:
 
 ```yaml
 redis:
@@ -341,15 +410,44 @@ externalRedis:
   existingSecret: "acs-external-redis"
 ```
 
-#### Redis Sentinel (HA)
+#### AWS ElastiCache Redis (Recommended)
 
 ```yaml
 redis:
-  cluster:
-    enabled: true
-    slaveCount: 2
-  sentinel:
-    enabled: true
+  enabled: false
+
+externalRedis:
+  enabled: true
+  host: "acs-redis.abc123.use1.cache.amazonaws.com"
+  port: 6379
+  existingSecret: "acs-secrets"
+```
+
+#### Self-Hosted Redis with Sentinel/Enterprise (Advanced)
+
+If you cannot use managed services:
+
+```bash
+# Install Redis Enterprise Operator
+kubectl apply -f https://raw.githubusercontent.com/RedisLabs/redis-enterprise-k8s-docs/master/bundle.yaml
+
+# Create Redis Enterprise cluster
+kubectl apply -f - <<EOF
+apiVersion: app.redislabs.com/v1
+kind: RedisEnterpriseCluster
+metadata:
+  name: acs-redis
+  namespace: acs-production
+spec:
+  nodes: 3
+  redisEnterpriseNodeResources:
+    limits:
+      cpu: "1000m"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 2Gi
+EOF
 ```
 
 ## Operations

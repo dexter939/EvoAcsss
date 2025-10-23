@@ -11,8 +11,8 @@ global:
 replicaCount:
   app: 3          # ACS application pods
   worker: 5       # Queue worker pods
-  redis: 3        # Redis cluster nodes
-  postgres: 3     # PostgreSQL cluster (if using managed service, set to 0)
+  redis: 1        # Redis replicas (for dev/staging only; use managed service for production)
+  postgres: 1     # PostgreSQL replicas (for dev/staging only; use managed service for production)
 
 ## Container Images
 image:
@@ -119,8 +119,14 @@ worker:
     targetMemoryUtilizationPercentage: 80
 
 ## PostgreSQL Configuration
+# WARNING: Embedded PostgreSQL is for DEVELOPMENT/STAGING only
+# For CARRIER-GRADE PRODUCTION (100K+ devices), use managed PostgreSQL:
+# - AWS RDS PostgreSQL
+# - Google Cloud SQL
+# - Azure Database for PostgreSQL
+# - Self-managed with Patroni operator
 postgresql:
-  enabled: true  # Set to false if using external/managed PostgreSQL
+  enabled: false  # PRODUCTION: Use managed service (see externalDatabase below)
   
   # Use StatefulSet for persistence
   statefulset:
@@ -166,8 +172,14 @@ postgresql:
       max_parallel_workers = 8
 
 ## Redis Configuration
+# WARNING: Embedded Redis is for DEVELOPMENT/STAGING only
+# For CARRIER-GRADE PRODUCTION (100K+ devices), use managed Redis:
+# - AWS ElastiCache Redis
+# - Google Cloud Memorystore
+# - Azure Cache for Redis
+# - Self-managed with Redis Enterprise or Sentinel operator
 redis:
-  enabled: true
+  enabled: false  # PRODUCTION: Use managed service (see externalRedis below)
   
   # Redis Cluster mode for HA
   cluster:
@@ -340,20 +352,21 @@ configData:
     opcache.interned_strings_buffer = 16
     opcache.max_accelerated_files = 20000
 
-## External Services (if not using embedded)
+## External Services (REQUIRED for Production)
+# For carrier-grade production with 100K+ devices, configure managed services:
 externalDatabase:
-  enabled: false
-  host: ""
+  enabled: true  # Set to true for production
+  host: "your-postgres.rds.amazonaws.com"  # Replace with your managed PostgreSQL endpoint
   port: 5432
   database: "acs"
   username: "acs_user"
-  existingSecret: "acs-external-db"
+  existingSecret: "acs-secrets"  # Contains postgres-user-password key
 
 externalRedis:
-  enabled: false
-  host: ""
+  enabled: true  # Set to true for production
+  host: "your-redis.cache.amazonaws.com"  # Replace with your managed Redis endpoint
   port: 6379
-  existingSecret: "acs-external-redis"
+  existingSecret: "acs-secrets"  # Contains redis-password key
 
 ## Node Selectors
 nodeSelector: {}
