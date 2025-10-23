@@ -24,6 +24,9 @@ Route::get('/health', function () {
     }
 });
 
+// Prometheus metrics endpoint
+Route::get('/metrics', [App\Http\Controllers\Api\MetricsController::class, 'index']);
+
 // Home - Redirect to Dashboard
 Route::get('/', function () {
     return redirect()->route('acs.dashboard');

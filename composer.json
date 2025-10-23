@@ -16,6 +16,7 @@
         "pdahal/php-xmpp": "^1.0",
         "php-mqtt/laravel-client": "^1.6",
         "predis/predis": "^3.2",
+        "promphp/prometheus_client_php": "^2.14",
         "stomp-php/stomp-php": "^5.1",
         "textalk/websocket": "^1.5"
     },
