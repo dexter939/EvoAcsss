@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ConfigurationTemplateLibrary extends Model
 {
+    protected $table = 'configuration_templates_library';
+
     protected $fillable = [
         'manufacturer_id',
         'product_id',
