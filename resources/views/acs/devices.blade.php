@@ -1155,18 +1155,23 @@ function loadCustomerServices(customerId) {
         return;
     }
     
-    fetch(`/acs/customers/${customerId}/services`)
+    fetch(`/acs/customers/${customerId}/services-list`)
         .then(response => response.json())
-        .then(services => {
-            serviceSelect.innerHTML = '<option value="">Seleziona servizio...</option>';
-            services.forEach(service => {
-                const option = document.createElement('option');
-                option.value = service.id;
-                option.textContent = service.name;
-                serviceSelect.appendChild(option);
-            });
+        .then(data => {
+            if (data.success && data.services) {
+                serviceSelect.innerHTML = '<option value="">Seleziona servizio...</option>';
+                data.services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id;
+                    option.textContent = service.name;
+                    serviceSelect.appendChild(option);
+                });
+            } else {
+                serviceSelect.innerHTML = '<option value="">Nessun servizio disponibile</option>';
+            }
         })
         .catch(error => {
+            console.error('Error loading services:', error);
             serviceSelect.innerHTML = '<option value="">Errore nel caricamento</option>';
         });
 }
