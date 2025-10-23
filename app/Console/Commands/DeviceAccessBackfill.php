@@ -20,14 +20,29 @@ class DeviceAccessBackfill extends Command
                             {--user= : Backfill only for specific user ID}
                             {--device= : Backfill only for specific device ID}
                             {--skip-super-admin : Do not auto-assign all devices to super-admins}
-                            {--force : Force overwrite existing assignments}';
+                            {--force : Force overwrite existing assignments}
+                            {--chunk=500 : Number of devices to process per batch}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Backfill user_devices table with existing devices and users';
+    protected $description = 'Backfill user_devices table with existing devices and users (carrier-grade scalable)';
+
+    /**
+     * Backfill statistics
+     */
+    protected array $stats = [
+        'super_admins' => 0,
+        'regular_users' => 0,
+        'assignments_created' => 0,
+        'assignments_skipped' => 0,
+        'assignments_updated' => 0,
+        'users_processed' => 0,
+        'devices_processed' => 0,
+        'chunks_processed' => 0,
+    ];
 
     /**
      * Execute the console command.
@@ -40,6 +55,7 @@ class DeviceAccessBackfill extends Command
         $deviceFilter = $this->option('device');
         $skipSuperAdmin = $this->option('skip-super-admin');
         $force = $this->option('force');
+        $chunkSize = (int) $this->option('chunk');
 
         // Validate role
         $validRoles = ['viewer', 'manager', 'admin'];
@@ -48,93 +64,56 @@ class DeviceAccessBackfill extends Command
             return self::FAILURE;
         }
 
-        $this->info('🔄 Device Access Backfill Tool');
-        $this->info('================================');
+        // Validate chunk size
+        if ($chunkSize <= 0) {
+            $this->error("Invalid chunk size: {$chunkSize}. Must be a positive integer.");
+            return self::FAILURE;
+        }
+
+        $this->info('🔄 Device Access Backfill Tool (Carrier-Grade)');
+        $this->info('================================================');
         
         if ($dryRun) {
             $this->warn('🧪 DRY-RUN MODE: No changes will be made');
         }
 
-        // Get users and devices
-        $usersQuery = User::query();
-        $devicesQuery = CpeDevice::query();
+        // Count totals for progress tracking
+        $totalUsers = User::query()
+            ->when($userFilter, fn($q) => $q->where('id', $userFilter))
+            ->count();
+        
+        $totalDevices = CpeDevice::query()
+            ->when($deviceFilter, fn($q) => $q->where('id', $deviceFilter))
+            ->count();
 
-        if ($userFilter) {
-            $usersQuery->where('id', $userFilter);
-        }
+        $this->info("📊 Found {$totalUsers} users and {$totalDevices} devices");
+        $this->info("⚙️  Chunk size: {$chunkSize} devices per batch");
 
-        if ($deviceFilter) {
-            $devicesQuery->where('id', $deviceFilter);
-        }
-
-        $users = $usersQuery->get();
-        $devices = $devicesQuery->get();
-
-        $this->info("📊 Found {$users->count()} users and {$devices->count()} devices");
-
-        if ($users->isEmpty()) {
+        if ($totalUsers === 0) {
             $this->warn('⚠️  No users found in the database');
             return self::SUCCESS;
         }
 
-        if ($devices->isEmpty()) {
+        if ($totalDevices === 0) {
             $this->warn('⚠️  No devices found in the database');
             return self::SUCCESS;
         }
 
-        $stats = [
-            'super_admins' => 0,
-            'regular_users' => 0,
-            'assignments_created' => 0,
-            'assignments_skipped' => 0,
-            'assignments_updated' => 0,
-        ];
-
-        DB::beginTransaction();
-
+        // Process users with cursor() to avoid memory exhaustion
+        $this->newLine();
+        $this->info('🚀 Starting backfill...');
+        
         try {
-            foreach ($users as $user) {
-                $isSuperAdmin = $user->isSuperAdmin();
-                
-                if ($isSuperAdmin) {
-                    $stats['super_admins']++;
-                    
-                    if ($skipSuperAdmin) {
-                        $this->line("⏭️  Skipping super-admin: {$user->name} (#{$user->id})");
-                        continue;
-                    }
-
-                    // Super-admins get access to ALL devices with 'admin' role
-                    $this->info("👑 Processing super-admin: {$user->name} (#{$user->id})");
-                    
-                    foreach ($devices as $device) {
-                        $result = $this->assignDevice($user, $device, 'admin', $force, $dryRun);
-                        $stats[$result]++;
-                    }
-                } else {
-                    $stats['regular_users']++;
-                    
-                    // Regular users: assign with default role
-                    $this->line("👤 Processing user: {$user->name} (#{$user->id}) with role '{$defaultRole}'");
-                    
-                    foreach ($devices as $device) {
-                        $result = $this->assignDevice($user, $device, $defaultRole, $force, $dryRun);
-                        $stats[$result]++;
-                    }
-                }
-            }
-
-            if ($dryRun) {
-                DB::rollBack();
-                $this->warn('🧪 DRY-RUN: Transaction rolled back');
-            } else {
-                DB::commit();
-                $this->info('✅ Transaction committed');
-            }
+            User::query()
+                ->when($userFilter, fn($q) => $q->where('id', $userFilter))
+                ->cursor()
+                ->each(function (User $user) use ($defaultRole, $skipSuperAdmin, $force, $dryRun, $chunkSize, $deviceFilter) {
+                    $this->processUser($user, $defaultRole, $skipSuperAdmin, $force, $dryRun, $chunkSize, $deviceFilter);
+                });
 
         } catch (\Exception $e) {
-            DB::rollBack();
             $this->error('❌ Error: ' . $e->getMessage());
+            $this->error($e->getTraceAsString());
             return self::FAILURE;
         }
 
@@ -145,11 +124,14 @@ class DeviceAccessBackfill extends Command
         $this->table(
             ['Metric', 'Count'],
             [
-                ['Super-admins processed', $stats['super_admins']],
-                ['Regular users processed', $stats['regular_users']],
-                ['Assignments created', $stats['assignments_created']],
-                ['Assignments skipped (existing)', $stats['assignments_skipped']],
-                ['Assignments updated (forced)', $stats['assignments_updated']],
+                ['Users processed', $this->stats['users_processed']],
+                ['Devices processed (total)', $this->stats['devices_processed']],
+                ['Chunks processed', $this->stats['chunks_processed']],
+                ['Super-admins', $this->stats['super_admins']],
+                ['Regular users', $this->stats['regular_users']],
+                ['Assignments created', $this->stats['assignments_created']],
+                ['Assignments skipped (existing)', $this->stats['assignments_skipped']],
+                ['Assignments updated (forced)', $this->stats['assignments_updated']],
             ]
         );
 
@@ -163,50 +145,115 @@ class DeviceAccessBackfill extends Command
     }
 
     /**
-     * Assign device to user with specified role
+     * Process single user with chunked device assignment
      * 
      * @param User $user
-     * @param CpeDevice $device
+     * @param string $defaultRole
+     * @param bool $skipSuperAdmin
+     * @param bool $force
+     * @param bool $dryRun
+     * @param int $chunkSize
+     * @param int|null $deviceFilter
+     */
+    protected function processUser(User $user, string $defaultRole, bool $skipSuperAdmin, bool $force, bool $dryRun, int $chunkSize, ?int $deviceFilter): void
+    {
+        $isSuperAdmin = $user->isSuperAdmin();
+        $role = $isSuperAdmin ? 'admin' : $defaultRole;
+
+        if ($isSuperAdmin) {
+            $this->stats['super_admins']++;
+            
+            if ($skipSuperAdmin) {
+                $this->line("⏭️  Skipping super-admin: {$user->name} (#{$user->id})");
+                return;
+            }
+
+            $this->info("👑 Processing super-admin: {$user->name} (#{$user->id})");
+        } else {
+            $this->stats['regular_users']++;
+            $this->line("👤 Processing user: {$user->name} (#{$user->id}) with role '{$role}'");
+        }
+
+        $this->stats['users_processed']++;
+
+        // Preload existing assignments for this user (memory-efficient)
+        $existingAssignments = DB::table('user_devices')
+            ->where('user_id', $user->id)
+            ->when($deviceFilter, fn($q) => $q->where('cpe_device_id', $deviceFilter))
+            ->pluck('role', 'cpe_device_id')
+            ->toArray();
+
+        // Process devices in chunks to avoid memory exhaustion
+        CpeDevice::query()
+            ->when($deviceFilter, fn($q) => $q->where('id', $deviceFilter))
+            ->orderBy('id')
+            ->chunk($chunkSize, function ($devices) use ($user, $role, $force, $dryRun, &$existingAssignments) {
+                $this->processDeviceChunk($user, $devices, $role, $force, $dryRun, $existingAssignments);
+                $this->stats['chunks_processed']++;
+                $this->stats['devices_processed'] += $devices->count();
+            });
+    }
+
+    /**
+     * Process chunk of devices for a user with batch operations
+     * 
+     * @param User $user
+     * @param \Illuminate\Support\Collection $devices
      * @param string $role
      * @param bool $force
      * @param bool $dryRun
-     * @return string Result status (assignments_created, assignments_skipped, assignments_updated)
+     * @param array $existingAssignments
      */
-    protected function assignDevice(User $user, CpeDevice $device, string $role, bool $force, bool $dryRun): string
+    protected function processDeviceChunk(User $user, $devices, string $role, bool $force, bool $dryRun, array &$existingAssignments): void
     {
-        // Check if assignment already exists
-        $existing = $user->devices()->where('cpe_device_id', $device->id)->first();
+        $toInsert = [];
+        $toUpdate = [];
 
-        if ($existing) {
-            if ($force) {
-                // Update existing assignment
-                if (!$dryRun) {
-                    $user->devices()->updateExistingPivot($device->id, [
-                        'role' => $role,
-                        'updated_at' => now(),
-                    ]);
+        foreach ($devices as $device) {
+            if (isset($existingAssignments[$device->id])) {
+                // Assignment exists
+                if ($force) {
+                    $toUpdate[] = $device->id;
+                    $this->line("  🔄 Will update: Device #{$device->id} ({$device->serial_number}) - Role: {$role}");
+                    $this->stats['assignments_updated']++;
+                } else {
+                    $currentRole = $existingAssignments[$device->id];
+                    $this->line("  ⏭️  Skipped: Device #{$device->id} (role '{$currentRole}')");
+                    $this->stats['assignments_skipped']++;
                 }
-                
-                $this->line("  🔄 Updated: Device #{$device->id} ({$device->serial_number}) - Role: {$role}");
-                return 'assignments_updated';
             } else {
-                // Skip existing
-                $currentRole = $existing->pivot->role;
-                $this->line("  ⏭️  Skipped: Device #{$device->id} (already assigned with role '{$currentRole}')");
-                return 'assignments_skipped';
+                // New assignment
+                $toInsert[] = [
+                    'user_id' => $user->id,
+                    'cpe_device_id' => $device->id,
+                    'role' => $role,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                $this->line("  ✅ Will assign: Device #{$device->id} ({$device->serial_number}) - Role: {$role}");
+                $this->stats['assignments_created']++;
             }
         }
 
-        // Create new assignment
-        if (!$dryRun) {
-            $user->devices()->attach($device->id, [
-                'role' => $role,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        // Batch operations within scoped transaction (not global!)
+        if (!$dryRun && (count($toInsert) > 0 || count($toUpdate) > 0)) {
+            DB::transaction(function () use ($user, $role, $toInsert, $toUpdate) {
+                // Batch insert new assignments
+                if (count($toInsert) > 0) {
+                    DB::table('user_devices')->insert($toInsert);
+                }
 
-        $this->line("  ✅ Assigned: Device #{$device->id} ({$device->serial_number}) - Role: {$role}");
-        return 'assignments_created';
+                // Batch update existing assignments
+                if (count($toUpdate) > 0) {
+                    DB::table('user_devices')
+                        ->where('user_id', $user->id)
+                        ->whereIn('cpe_device_id', $toUpdate)
+                        ->update([
+                            'role' => $role,
+                            'updated_at' => now(),
+                        ]);
+                }
+            });
+        }
     }
 }
