@@ -1135,6 +1135,82 @@ class AcsController extends Controller
             ], 500);
         }
     }
+
+    public function getDeviceParametersFromDevice(Request $request, $id)
+    {
+        try {
+            $device = CpeDevice::findOrFail($id);
+            $parameters = $request->input('parameters', []);
+            
+            if (empty($parameters)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nessun parametro specificato'
+                ], 400);
+            }
+            
+            $task = \App\Models\ProvisioningTask::create([
+                'cpe_device_id' => $device->id,
+                'task_type' => 'get_parameters',
+                'status' => 'pending',
+                'task_data' => [
+                    'parameters' => $parameters
+                ]
+            ]);
+            
+            \App\Jobs\ProcessProvisioningTask::dispatch($task);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Richiesta GetParameterValues inviata. I parametri saranno disponibili al prossimo Inform del dispositivo.',
+                'task_id' => $task->id
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Get parameters error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Errore durante la richiesta: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function setDeviceParametersOnDevice(Request $request, $id)
+    {
+        try {
+            $device = CpeDevice::findOrFail($id);
+            $parameters = $request->input('parameters', []);
+            
+            if (empty($parameters)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nessun parametro specificato'
+                ], 400);
+            }
+            
+            $task = \App\Models\ProvisioningTask::create([
+                'cpe_device_id' => $device->id,
+                'task_type' => 'set_parameters',
+                'status' => 'pending',
+                'task_data' => [
+                    'parameters' => $parameters
+                ]
+            ]);
+            
+            \App\Jobs\ProcessProvisioningTask::dispatch($task);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Richiesta SetParameterValues inviata. Le modifiche saranno applicate al prossimo Inform del dispositivo.',
+                'task_id' => $task->id
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Set parameters error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Errore durante la richiesta: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     
     public function showDevice(Request $request, $id)
     {

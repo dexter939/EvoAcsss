@@ -16,6 +16,9 @@
 @endsection
 
 @section('content')
+<script>
+    const deviceId = {{ $device->id }};
+</script>
 
 <!-- Device Status Header -->
 <div class="row mb-4">
