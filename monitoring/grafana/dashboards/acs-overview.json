@@ -1,0 +1,233 @@
+{
+  "dashboard": {
+    "title": "ACS - Carrier-Grade Overview",
+    "tags": ["acs", "tr-069", "tr-369", "overview"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "Total Devices",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "acs_devices_total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 80000},
+                {"color": "red", "value": 100000}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Online Devices",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+        "targets": [
+          {
+            "expr": "acs_devices_online",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 50000},
+                {"color": "green", "value": 80000}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Offline Devices",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+        "targets": [
+          {
+            "expr": "acs_devices_offline",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 10000},
+                {"color": "red", "value": 20000}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Active Alarms",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "acs_alarms_active",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 100}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Critical Alarms",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+        "targets": [
+          {
+            "expr": "acs_alarms_critical",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Active TR-069 Sessions",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+        "targets": [
+          {
+            "expr": "acs_tr069_active_sessions",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "Device Status Over Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "acs_devices_online",
+            "refId": "A",
+            "legendFormat": "Online"
+          },
+          {
+            "expr": "acs_devices_offline",
+            "refId": "B",
+            "legendFormat": "Offline"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Devices"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "title": "Queue Backlog by Queue",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "acs_queue_jobs_pending",
+            "refId": "A",
+            "legendFormat": "{{ queue }}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Pending Jobs"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "title": "Devices by Vendor",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "acs_devices_by_vendor",
+            "refId": "A",
+            "legendFormat": "{{ vendor }}"
+          }
+        ]
+      },
+      {
+        "title": "Failed Jobs (Last 24h)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
+        "targets": [
+          {
+            "expr": "rate(acs_queue_jobs_failed_total[5m])",
+            "refId": "A",
+            "legendFormat": "Failed Jobs/sec"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Jobs/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "title": "Cache Hit Ratio",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+        "targets": [
+          {
+            "expr": "acs_cache_hit_ratio",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 85}
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

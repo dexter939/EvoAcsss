@@ -1,0 +1,158 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: acs-alerts
+  namespace: acs-production
+  labels:
+    app: acs
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: acs.devices
+      interval: 30s
+      rules:
+        - alert: HighDeviceOfflineRate
+          expr: |
+            (acs_devices_offline / acs_devices_total) > 0.2
+          for: 5m
+          labels:
+            severity: warning
+            component: devices
+          annotations:
+            summary: "High device offline rate detected"
+            description: "More than 20% of devices are offline ({{ $value | humanizePercentage }})"
+
+        - alert: CriticalDeviceOfflineRate
+          expr: |
+            (acs_devices_offline / acs_devices_total) > 0.5
+          for: 5m
+          labels:
+            severity: critical
+            component: devices
+          annotations:
+            summary: "Critical device offline rate"
+            description: "More than 50% of devices are offline ({{ $value | humanizePercentage }})"
+
+        - alert: NoDevicesOnline
+          expr: acs_devices_online == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: devices
+          annotations:
+            summary: "No devices are online"
+            description: "All CPE devices appear to be offline"
+
+    - name: acs.queues
+      interval: 30s
+      rules:
+        - alert: HighQueueBacklog
+          expr: acs_queue_jobs_pending{queue="default"} > 1000
+          for: 10m
+          labels:
+            severity: warning
+            component: queue
+          annotations:
+            summary: "High queue backlog in {{ $labels.queue }}"
+            description: "Queue {{ $labels.queue }} has {{ $value }} pending jobs"
+
+        - alert: CriticalQueueBacklog
+          expr: acs_queue_jobs_pending{queue="default"} > 5000
+          for: 5m
+          labels:
+            severity: critical
+            component: queue
+          annotations:
+            summary: "Critical queue backlog in {{ $labels.queue }}"
+            description: "Queue {{ $labels.queue }} has {{ $value }} pending jobs"
+
+        - alert: HighFailedJobsRate
+          expr: |
+            rate(acs_queue_jobs_failed_total[5m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+            component: queue
+          annotations:
+            summary: "High rate of failed jobs"
+            description: "Job failure rate is {{ $value }} jobs/sec"
+
+        - alert: ExcessiveFailedJobs
+          expr: acs_queue_jobs_failed_total > 100
+          for: 10m
+          labels:
+            severity: critical
+            component: queue
+          annotations:
+            summary: "Excessive failed jobs accumulation"
+            description: "Total failed jobs: {{ $value }}"
+
+    - name: acs.alarms
+      interval: 30s
+      rules:
+        - alert: HighCriticalAlarms
+          expr: acs_alarms_critical > 10
+          for: 5m
+          labels:
+            severity: warning
+            component: alarms
+          annotations:
+            summary: "High number of critical alarms"
+            description: "{{ $value }} critical alarms are active"
+
+        - alert: MassiveAlarmGeneration
+          expr: |
+            rate(acs_alarms_active[5m]) > 50
+          for: 2m
+          labels:
+            severity: critical
+            component: alarms
+          annotations:
+            summary: "Massive alarm generation detected"
+            description: "Alarm generation rate: {{ $value }} alarms/sec"
+
+    - name: acs.sessions
+      interval: 30s
+      rules:
+        - alert: HighActiveSessions
+          expr: acs_tr069_active_sessions > 500
+          for: 5m
+          labels:
+            severity: warning
+            component: tr069
+          annotations:
+            summary: "High number of active TR-069 sessions"
+            description: "{{ $value }} active sessions detected"
+
+        - alert: NoActiveSessions
+          expr: acs_tr069_active_sessions == 0
+          for: 15m
+          labels:
+            severity: info
+            component: tr069
+          annotations:
+            summary: "No active TR-069 sessions"
+            description: "No devices are communicating with ACS"
+
+    - name: acs.system
+      interval: 30s
+      rules:
+        - alert: HighDatabaseConnections
+          expr: acs_database_connections > 400
+          for: 5m
+          labels:
+            severity: warning
+            component: database
+          annotations:
+            summary: "High number of database connections"
+            description: "{{ $value }} database connections active (max 500)"
+
+        - alert: LowCacheHitRatio
+          expr: acs_cache_hit_ratio < 70
+          for: 10m
+          labels:
+            severity: warning
+            component: cache
+          annotations:
+            summary: "Low cache hit ratio"
+            description: "Cache hit ratio is {{ $value }}% (threshold: 70%)"
