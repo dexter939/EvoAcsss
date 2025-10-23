@@ -92,4 +92,67 @@ class User extends Authenticatable
     {
         return $this->hasRole('super-admin');
     }
+
+    /**
+     * Get devices accessible by this user
+     * 
+     * Returns CPE devices this user can access with role-based permissions.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function devices()
+    {
+        return $this->belongsToMany(
+            CpeDevice::class,
+            'user_devices',
+            'user_id',
+            'cpe_device_id'
+        )->withPivot('role', 'department')
+          ->withTimestamps();
+    }
+
+    /**
+     * Check if user has access to specific device
+     * 
+     * @param int|CpeDevice $device Device ID or model instance
+     * @param string|null $minRole Minimum required role (viewer, manager, admin)
+     * @return bool
+     */
+    public function canAccessDevice(int|CpeDevice $device, ?string $minRole = null): bool
+    {
+        $deviceId = $device instanceof CpeDevice ? $device->id : $device;
+        
+        $query = $this->devices()->where('cpe_device_id', $deviceId);
+        
+        if ($minRole) {
+            // Role hierarchy: admin > manager > viewer
+            $roleHierarchy = [
+                'viewer' => ['viewer', 'manager', 'admin'],
+                'manager' => ['manager', 'admin'],
+                'admin' => ['admin']
+            ];
+            
+            $allowedRoles = $roleHierarchy[$minRole] ?? [];
+            $query->whereIn('user_devices.role', $allowedRoles);
+        }
+        
+        return $query->exists();
+    }
+
+    /**
+     * Get user's role for specific device
+     * 
+     * @param int|CpeDevice $device Device ID or model instance
+     * @return string|null Role (viewer, manager, admin) or null if no access
+     */
+    public function getDeviceRole(int|CpeDevice $device): ?string
+    {
+        $deviceId = $device instanceof CpeDevice ? $device->id : $device;
+        
+        $pivot = $this->devices()
+            ->where('cpe_device_id', $deviceId)
+            ->first();
+        
+        return $pivot?->pivot->role;
+    }
 }
