@@ -1,0 +1,189 @@
+# ACS Production Docker Compose
+# Carrier-grade deployment with PostgreSQL, Redis, Prosody XMPP
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: acs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-acs_production}
+      POSTGRES_USER: ${DB_USERNAME:-acs_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-acs_user} -d ${DB_DATABASE:-acs_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - acs-network
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: acs-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - acs-network
+
+  # Prosody XMPP Server (for TR-369 USP)
+  prosody:
+    image: prosody/prosody:0.12
+    container_name: acs-prosody
+    restart: unless-stopped
+    environment:
+      PROSODY_ADMINS: admin@${XMPP_DOMAIN:-acs.local}
+    volumes:
+      - ./docker/prosody/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua:ro
+      - prosody_data:/var/lib/prosody
+    ports:
+      - "5222:5222"   # Client to server
+      - "5269:5269"   # Server to server
+      - "5280:5280"   # HTTP
+    networks:
+      - acs-network
+
+  # ACS Application
+  acs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acs-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_NAME: "ACS Server"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-https://acs.example.com}
+      
+      # Database
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-acs_production}
+      DB_USERNAME: ${DB_USERNAME:-acs_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      
+      # Cache
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      
+      # XMPP
+      XMPP_HOST: prosody
+      XMPP_PORT: 5222
+      XMPP_DOMAIN: ${XMPP_DOMAIN:-acs.local}
+      
+      # OpenAI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      
+      # Session
+      SESSION_SECRET: ${SESSION_SECRET}
+      
+      # ACS Configuration
+      ACS_API_KEY: ${ACS_API_KEY}
+      USP_MQTT_ENABLED: "true"
+      USP_WEBSOCKET_ENABLED: "true"
+      TR069_ENABLED: "true"
+    volumes:
+      - storage_data:/var/www/html/storage
+      - ./logs:/var/www/html/storage/logs
+    ports:
+      - "8080:8080"
+    networks:
+      - acs-network
+    healthcheck:
+      test: ["CMD", "php", "artisan", "system:health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Laravel Horizon Queue Worker
+  horizon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acs-horizon
+    restart: unless-stopped
+    depends_on:
+      - acs-app
+      - redis
+    environment:
+      APP_ENV: production
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: php artisan horizon
+    volumes:
+      - storage_data:/var/www/html/storage
+    networks:
+      - acs-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: acs-nginx
+    restart: unless-stopped
+    depends_on:
+      - acs-app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "7547:7547"   # TR-069 ACS
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - ./public:/var/www/html/public:ro
+    networks:
+      - acs-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prosody_data:
+    driver: local
+  storage_data:
+    driver: local
+
+networks:
+  acs-network:
+    driver: bridge
