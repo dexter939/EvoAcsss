@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\StbServiceController;
 use App\Http\Controllers\Api\TR181Controller;
 use App\Http\Controllers\Api\TelemetryController;
 use App\Http\Controllers\Api\StompMetricsController;
+use App\Http\Controllers\Api\VendorLibraryController;
 
 Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(function () {
     
@@ -142,4 +143,20 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(f
     Route::get('devices/{device}/tr181/hosts', [TR181Controller::class, 'getHosts']);
     Route::get('devices/{device}/tr181/dhcp', [TR181Controller::class, 'getDHCP']);
     Route::get('tr181/validate', [TR181Controller::class, 'validateParameter']);
+    
+    // Vendor Library & Compatibility Matrix
+    Route::prefix('vendors')->group(function () {
+        Route::get('manufacturers', [VendorLibraryController::class, 'getManufacturers']);
+        Route::get('manufacturers/{id}', [VendorLibraryController::class, 'getManufacturer']);
+        Route::get('products', [VendorLibraryController::class, 'getProducts']);
+        Route::get('products/{id}', [VendorLibraryController::class, 'getProduct']);
+        Route::get('products/{id}/compatibility-matrix', [VendorLibraryController::class, 'getProductCompatibilityMatrix']);
+        Route::get('products/{id}/quirks', [VendorLibraryController::class, 'getProductQuirks']);
+        Route::get('quirks', [VendorLibraryController::class, 'getQuirks']);
+        Route::get('templates', [VendorLibraryController::class, 'getTemplates']);
+        Route::get('templates/{id}', [VendorLibraryController::class, 'getTemplate']);
+        Route::post('detect', [VendorLibraryController::class, 'detectVendor']);
+        Route::post('compatibility/check', [VendorLibraryController::class, 'checkCompatibility']);
+        Route::get('stats', [VendorLibraryController::class, 'getStatistics']);
+    });
 });
