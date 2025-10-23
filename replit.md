@@ -33,6 +33,9 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Network Topology Map**: Real-time interactive visualization of connected LAN/WiFi clients.
 - **NAT Traversal & Pending Commands Queue**: Solution for executing TR-069 commands on devices behind NAT/firewalls.
 - **Real-time Alarms & Monitoring**: Carrier-grade alarm management with SSE real-time notifications, a dashboard, event-driven processing, and a comprehensive monitoring and alerting system with multi-channel notifications and a configurable rules engine.
+- **Multi-Vendor Device Library**: Comprehensive vendor management system with 6 dedicated UI views (manufacturers, products, quirks, templates), firmware compatibility matrix, vendor quirks database, configuration template library, and OUI-based auto-detection with 85% fuzzy matching threshold.
+- **Bulk Operations API**: RESTful endpoints for bulk vendor detection, bulk template application with dry-run mode, and bulk firmware compatibility checking across multiple devices with detailed result reporting.
+- **Vendor Detection CLI**: Artisan command `vendor:detect` with options for batch processing (--all, --unmatched, --device, --force), progress tracking, and comprehensive operational monitoring.
 
 # External Dependencies
 - **PostgreSQL 16+**: Primary relational database.
