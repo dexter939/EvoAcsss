@@ -1,0 +1,57 @@
+{{- if .Values.prosody.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "acs.prosody.fullname" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: xmpp
+spec:
+  replicas: {{ .Values.prosody.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "acs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: xmpp
+  template:
+    metadata:
+      labels:
+        {{- include "acs.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: xmpp
+    spec:
+      containers:
+        - name: prosody
+          image: "{{ .Values.image.prosody.repository }}:{{ .Values.image.prosody.tag }}"
+          imagePullPolicy: {{ .Values.image.prosody.pullPolicy }}
+          ports:
+            - name: client
+              containerPort: 5222
+              protocol: TCP
+            - name: server
+              containerPort: 5269
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 5222
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 5222
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.prosody.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prosody/prosody.cfg.lua
+              subPath: prosody.cfg.lua
+            - name: data
+              mountPath: /var/lib/prosody
+      
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "acs.prosody.fullname" . }}-config
+        - name: data
+          emptyDir: {}
+{{- end }}

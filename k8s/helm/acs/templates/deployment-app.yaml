@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "acs.app.name" . }}
+  labels:
+    {{- include "acs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  {{- if not .Values.app.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount.app }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "acs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      labels:
+        {{- include "acs.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: app
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "acs.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      
+      # Init container for migrations
+      initContainers:
+        - name: migrate
+          image: "{{ .Values.image.app.repository }}:{{ .Values.image.app.tag }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              php artisan migrate --force
+              php artisan config:cache
+              php artisan route:cache
+              php artisan view:cache
+          env:
+            {{- include "acs.env" . | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "acs.fullname" . }}-config
+            - secretRef:
+                name: {{ include "acs.fullname" . }}-secret
+      
+      containers:
+        # PHP-FPM Container
+        - name: php-fpm
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.app.repository }}:{{ .Values.image.app.tag }}"
+          imagePullPolicy: {{ .Values.image.app.pullPolicy }}
+          command: ["php-fpm"]
+          ports:
+            - name: fpm
+              containerPort: 9000
+              protocol: TCP
+          env:
+            {{- include "acs.env" . | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "acs.fullname" . }}-config
+            - secretRef:
+                name: {{ include "acs.fullname" . }}-secret
+          resources:
+            {{- toYaml .Values.app.resources | nindent 12 }}
+          volumeMounts:
+            - name: app-storage
+              mountPath: /var/www/html/storage/app
+            - name: php-config
+              mountPath: /usr/local/etc/php/php.ini
+              subPath: php.ini
+        
+        # Nginx Container
+        - name: nginx
+          image: "{{ .Values.image.nginx.repository }}:{{ .Values.image.nginx.tag }}"
+          imagePullPolicy: {{ .Values.image.nginx.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: tr069
+              containerPort: 7547
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.app.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.app.readinessProbe | nindent 12 }}
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: app-storage
+              mountPath: /var/www/html/storage/app
+              readOnly: true
+      
+      volumes:
+        - name: app-storage
+          persistentVolumeClaim:
+            claimName: {{ include "acs.fullname" . }}-storage
+        - name: php-config
+          configMap:
+            name: {{ include "acs.fullname" . }}-config
+        - name: nginx-config
+          configMap:
+            name: {{ include "acs.fullname" . }}-nginx
+      
+      {{- with .Values.app.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
