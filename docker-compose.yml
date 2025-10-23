@@ -18,15 +18,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      - "5432:5432"
+    networks:
+      - acs-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-acs_user} -d ${DB_DATABASE:-acs_production}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - acs-network
 
   # Redis Cache & Queue
   redis:
@@ -34,17 +32,17 @@ services:
     container_name: acs-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    networks:
+      - acs-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "sh", "-c", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - acs-network
 
   # Prosody XMPP Server (for TR-369 USP)
   prosody:

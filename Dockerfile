@@ -124,9 +124,6 @@ RUN mkdir -p \
     chown -R acs:acs storage bootstrap/cache && \
     chmod -R 775 storage bootstrap/cache
 
-# Switch to non-root user
-USER acs
-
 # Expose ports
 EXPOSE 9000 8080
 
@@ -134,6 +131,5 @@ EXPOSE 9000 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD php artisan system:health || exit 1
 
-# Start supervisor
-USER root
+# Start supervisor as root (nginx needs to bind privileged ports)
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
