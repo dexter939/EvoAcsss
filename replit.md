@@ -13,7 +13,7 @@ I prefer clear and concise explanations. When making changes, prioritize core fu
 The web interface utilizes the Soft UI Dashboard Laravel template for a modern, responsive design. Key UI elements include a redesigned dashboard, enhanced CPE device configuration editors, a real-time alarms system, card-based device listings, a tabbed device details modal, an AI-Powered Configuration Assistant Dashboard, a Network Topology Map, an Advanced Provisioning Dashboard, a Performance Monitoring Dashboard, and an Advanced Monitoring & Alerting System. The sidebar navigation includes an "Impostazioni" (Settings) section containing System Updates management and user/role administration.
 
 ## Technical Implementations
-- **Protocol Support**: Comprehensive implementation of 10 production-ready TR protocols (TR-069, TR-104, TR-106, TR-111, TR-135, TR-140, TR-157, TR-181, TR-262, TR-369) with BBF-compliant services. This includes a real STOMP client for TR-262 and device-scoped caching for TR-181.
+- **Protocol Support**: Comprehensive implementation of 10 production-ready TR protocols (TR-069, TR-104, TR-106, TR-111, TR-135, TR-140, TR-157, TR-181, TR-262, TR-369) with BBF-compliant services. This includes a real STOMP client for TR-262, device-scoped caching for TR-181, and complete TR-369 USP transport layer implementations (HTTP, MQTT, WebSocket) with UspTransportFactory for automatic MTP selection based on device configuration.
 - **Database**: PostgreSQL with optimized indexing and multi-tenancy.
 - **Performance Optimizations**: Strategic database indexes, multi-tier Redis caching, and a centralized CacheService.
 - **Asynchronous Processing**: Laravel Horizon with Redis queues for provisioning, firmware, and TR-069 requests.
