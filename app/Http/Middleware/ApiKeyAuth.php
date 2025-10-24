@@ -50,9 +50,9 @@ class ApiKeyAuth
         // Extract API key from X-API-Key header or api_key query parameter
         $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
         
-        // Carica chiave API valida da variabile d'ambiente
-        // Load valid API key from environment variable
-        $validApiKey = env('ACS_API_KEY', 'acs-secret-key-change-in-production');
+        // Carica chiave API valida da configurazione
+        // Load valid API key from configuration
+        $validApiKey = config('acs.api_key', 'acs-secret-key-change-in-production');
         
         // Verifica presenza e validità API key
         // Verify presence and validity of API key

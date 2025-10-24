@@ -681,11 +681,22 @@ class UspController extends Controller
         $record = $this->uspService->wrapInRecord($message, $device->usp_endpoint_id, $msgId);
         $serializedRecord = $record->serializeToString();
         
+        // Use withBody() + send('POST') to transmit raw binary data
+        // Note: Using ->post() after ->withBody() can override the binary payload
         $httpResponse = Http::withHeaders([
-            'Content-Type' => 'application/vnd.bbf.usp.msg'
-        ])->post($device->connection_request_url, $serializedRecord);
+            'Content-Type' => 'application/vnd.bbf.usp.msg',
+            'Accept' => 'application/vnd.bbf.usp.msg'
+        ])
+        ->withBody($serializedRecord, 'application/vnd.bbf.usp.msg')
+        ->timeout(30)
+        ->send('POST', $device->connection_request_url);
         
         if (!$httpResponse->successful()) {
+            \Log::error('USP HTTP request failed', [
+                'device_id' => $device->id,
+                'status' => $httpResponse->status(),
+                'url' => $device->connection_request_url
+            ]);
             return $this->failureResponse('Failed to send HTTP request to device', 500);
         }
         
