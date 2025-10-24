@@ -292,16 +292,13 @@ class VoiceServiceController extends Controller
             'total_profiles' => SipProfile::count(),
             'total_lines' => VoipLine::count(),
             'active_lines' => VoipLine::where('status', 'Registered')->count(),
-            'protocols' => VoiceService::select('protocol')
+            'by_type' => VoiceService::select('protocol')
                 ->selectRaw('COUNT(*) as count')
                 ->groupBy('protocol')
                 ->get(),
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        return $stats;
     }
 
     public function provisionService(Request $request, string $id): JsonResponse
