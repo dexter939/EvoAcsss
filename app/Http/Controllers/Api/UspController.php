@@ -301,10 +301,11 @@ class UspController extends Controller
             );
             
             // Wrap in Record
+            // Arguments: (message, toId=device, fromId=controller)
             $record = $this->uspService->wrapInRecord(
                 $addMessage,
-                config('usp.controller_endpoint_id'),
-                $device->usp_endpoint_id
+                $device->usp_endpoint_id,
+                config('usp.controller_endpoint_id')
             );
             
             // Send via appropriate MTP
@@ -379,10 +380,11 @@ class UspController extends Controller
             );
             
             // Wrap in Record
+            // Arguments: (message, toId=device, fromId=controller)
             $record = $this->uspService->wrapInRecord(
                 $deleteMessage,
-                config('usp.controller_endpoint_id'),
-                $device->usp_endpoint_id
+                $device->usp_endpoint_id,
+                config('usp.controller_endpoint_id')
             );
             
             // Send via appropriate MTP
@@ -489,10 +491,11 @@ class UspController extends Controller
     protected function storePendingRequest(CpeDevice $device, string $msgId, string $messageType, $message)
     {
         // Wrap message in Record
+        // Arguments: (message, toId=device, fromId=controller)
         $record = $this->uspService->wrapInRecord(
             $message,
-            config('usp.controller_endpoint_id'),
-            $device->usp_endpoint_id
+            $device->usp_endpoint_id,
+            config('usp.controller_endpoint_id')
         );
         
         // Serialize Record to binary for storage
@@ -678,7 +681,12 @@ class UspController extends Controller
     private function sendHttpRequest(CpeDevice $device, $message, string $msgId)
     {
         // Wrap message in USP Record and serialize to protobuf
-        $record = $this->uspService->wrapInRecord($message, $device->usp_endpoint_id, $msgId);
+        // Arguments: (message, toId=device, fromId=controller)
+        $record = $this->uspService->wrapInRecord(
+            $message,
+            $device->usp_endpoint_id,
+            config('usp.controller_endpoint_id')
+        );
         $serializedRecord = $record->serializeToString();
         
         // Use withBody() + send('POST') to transmit raw binary data

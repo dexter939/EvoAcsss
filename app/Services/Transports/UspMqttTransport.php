@@ -50,10 +50,11 @@ class UspMqttTransport
         }
         
         // Wrap message in USP Record
+        // Arguments: (message, toId=device, fromId=controller)
         $record = $this->uspService->wrapInRecord(
             $message,
-            config('usp.controller_endpoint_id', 'proto::acs-controller-001'),
-            $device->usp_endpoint_id ?? 'proto::mqtt-device-' . $device->id
+            $device->usp_endpoint_id ?? 'proto::mqtt-device-' . $device->id,
+            config('usp.controller_endpoint_id', 'proto::acs-controller-001')
         );
         
         // Serialize Record to binary Protocol Buffers format
