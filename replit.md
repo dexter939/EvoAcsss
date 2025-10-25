@@ -16,7 +16,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Database**: PostgreSQL with optimized indexing and multi-tenancy.
 - **Performance Optimizations**: Strategic database indexes, multi-tier Redis caching, and a centralized CacheService.
 - **Asynchronous Processing**: Laravel Horizon with Redis queues for provisioning, firmware, and TR-069 requests.
-- **API Security**: API Key authentication for v1 RESTful endpoints, rate limiting, and DDoS protection.
+- **API Security**: Dual authentication system for v1 RESTful endpoints - Laravel Sanctum token-based authentication for mobile apps, API Key authentication for server-to-server calls, rate limiting, and DDoS protection.
 - **Security Hardening**: Enterprise-grade security features including RBAC, input validation, security audit logging, IP blacklist management, and a comprehensive Audit Log System.
 - **Multi-Tenant Device Access Control**: Role-based device scoping via `user_devices` pivot table with three permission levels, enforced by `EnsureDeviceAccess` middleware.
 - **Scalability**: Achieved through database optimizations, Redis caching, and a high-throughput queue system.
@@ -26,7 +26,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Test Infrastructure**: Comprehensive test suite with 5 Fake Services to isolate external dependencies and ensure deterministic test execution. Includes a regression test suite for JavaScript integrity.
 - **JavaScript Quality Assurance**: Custom ESLint-based linting system for Blade templates, validating JavaScript for duplicate declarations.
 - **Audit Log System**: Comprehensive compliance and security tracking system for all CRUD operations and business-critical actions, supporting various compliance standards.
-- **Mobile Application Architecture**: React Native/Expo app with TypeScript, environment-aware configuration (dotenv + expo-constants), API service layer (Axios) consuming Laravel REST endpoints, React Navigation (Stack + Bottom Tabs), AsyncStorage for offline token management, secure credential handling via .env files, and multi-source Constants support for dev/production builds.
+- **Mobile Application Architecture**: React Native/Expo app with TypeScript, environment-aware configuration (dotenv + expo-constants), API service layer (Axios) consuming Laravel REST endpoints, React Navigation (Stack + Bottom Tabs), AsyncStorage for offline token management, secure credential handling via .env files, and multi-source Constants support for dev/production builds. Backend provides mobile authentication endpoints (/api/auth/login, /api/auth/logout) with Laravel Sanctum token generation.
 
 ## Feature Specifications
 - **Device Management**: Auto-registration, zero-touch provisioning with configuration profiles, firmware management, and a multi-vendor device library.

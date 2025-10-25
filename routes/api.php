@@ -19,8 +19,23 @@ use App\Http\Controllers\Api\TelemetryController;
 use App\Http\Controllers\Api\StompMetricsController;
 use App\Http\Controllers\Api\VendorLibraryController;
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\AuthController;
 
-Route::prefix('v1')->middleware(\App\Http\Middleware\ApiKeyAuth::class)->group(function () {
+// Public auth routes (no middleware)
+Route::prefix('auth')->group(function () {
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('register', [AuthController::class, 'register']); // Optional
+});
+
+// Protected auth routes (require token)
+Route::prefix('auth')->middleware('auth:sanctum')->group(function () {
+    Route::post('logout', [AuthController::class, 'logout']);
+    Route::get('user', [AuthController::class, 'user']);
+    Route::post('refresh', [AuthController::class, 'refresh']);
+});
+
+// API v1 routes - now support both API Key AND Sanctum token auth
+Route::prefix('v1')->middleware(['auth:sanctum', 'api.auth'])->group(function () {
     
     // Telemetry & Monitoring APIs
     Route::get('telemetry/current', [TelemetryController::class, 'current']);
