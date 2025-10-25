@@ -46,10 +46,23 @@ class AlarmService {
   }
 
   /**
-   * Resolve alarm
+   * Clear/resolve alarm
    */
-  async resolveAlarm(id: number): Promise<void> {
-    await apiService.post(`${Config.ENDPOINTS.ALARMS}/${id}/resolve`);
+  async clearAlarm(id: number, resolution?: string): Promise<void> {
+    await apiService.post(`${Config.ENDPOINTS.ALARMS}/${id}/clear`, {
+      resolution,
+    });
+  }
+
+  /**
+   * Get recent alarms (last N hours)
+   */
+  async getRecentAlarms(hours: number = 24): Promise<Alarm[]> {
+    const response = await apiService.get<{ data: Alarm[]; hours: number; count: number }>(
+      `${Config.ENDPOINTS.ALARMS}/recent`,
+      { params: { hours } }
+    );
+    return response.data;
   }
 
   /**

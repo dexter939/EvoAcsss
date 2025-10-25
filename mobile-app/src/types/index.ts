@@ -50,25 +50,34 @@ export interface DeviceStats {
 export interface Alarm {
   id: number;
   device_id: number;
+  alarm_type: string;
   severity: 'critical' | 'major' | 'minor' | 'warning' | 'info';
-  type: string;
-  message: string;
-  acknowledged: boolean;
-  acknowledged_by?: number;
+  status: 'active' | 'acknowledged' | 'cleared';
+  category: string;
+  title: string;
+  description: string;
+  metadata?: any;
+  raised_at: string;
   acknowledged_at?: string;
-  resolved: boolean;
-  resolved_at?: string;
+  acknowledged_by?: number;
+  cleared_at?: string;
+  resolution?: string;
   created_at: string;
   updated_at: string;
   device?: Device;
+  acknowledged_by_user?: User;
 }
 
 export interface AlarmStats {
   total: number;
+  active: number;
+  acknowledged: number;
+  cleared: number;
   critical: number;
   major: number;
   minor: number;
   warning: number;
+  info: number;
   unacknowledged: number;
 }
 

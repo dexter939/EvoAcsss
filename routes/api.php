@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\StompMetricsController;
 use App\Http\Controllers\Api\VendorLibraryController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AlarmController;
 
 // Public auth routes (no middleware)
 Route::prefix('auth')->group(function () {
@@ -254,4 +255,12 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'api.auth'])->group(function ()
     Route::get('audit-logs/export/json', [AuditLogController::class, 'exportJson']);
     Route::get('audit-logs/for-model', [AuditLogController::class, 'forModel']);
     Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show']);
+    
+    // Alarm APIs - Mobile Support
+    Route::get('alarms', [AlarmController::class, 'index']);
+    Route::get('alarms/stats', [AlarmController::class, 'stats']);
+    Route::get('alarms/recent', [AlarmController::class, 'recent']);
+    Route::get('alarms/{alarm}', [AlarmController::class, 'show']);
+    Route::post('alarms/{alarm}/acknowledge', [AlarmController::class, 'acknowledge']);
+    Route::post('alarms/{alarm}/clear', [AlarmController::class, 'clear']);
 });
