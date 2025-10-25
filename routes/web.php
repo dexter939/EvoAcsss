@@ -42,6 +42,9 @@ Route::post('/tr069/empty', [TR069Controller::class, 'handleEmpty'])->name('tr06
 // TR-369 USP Endpoints (Public)
 Route::match(['get', 'post'], '/usp', [UspController::class, 'handleUspMessage'])->name('usp.message');
 
+// TR-369 USP MQTT Bridge (Public - for load testing & MQTT clients)
+Route::post('/tr369/mqtt/publish', [UspController::class, 'handleMqttPublish'])->name('usp.mqtt.publish');
+
 // ACS Web Dashboard (Protected Routes)
 Route::prefix('acs')->name('acs.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [AcsController::class, 'dashboard'])->name('dashboard');

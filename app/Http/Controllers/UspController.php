@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use App\Services\UspMessageService;
+use App\Services\Transports\UspMqttTransport;
 use App\Models\CpeDevice;
 use App\Models\DeviceParameter;
 use App\Models\UspPendingRequest;
@@ -21,10 +22,12 @@ use Illuminate\Support\Facades\Log;
 class UspController extends Controller
 {
     protected UspMessageService $uspService;
+    protected UspMqttTransport $mqttTransport;
 
-    public function __construct(UspMessageService $uspService)
+    public function __construct(UspMessageService $uspService, UspMqttTransport $mqttTransport)
     {
         $this->uspService = $uspService;
+        $this->mqttTransport = $mqttTransport;
     }
 
     /**
@@ -137,15 +140,20 @@ class UspController extends Controller
     /**
      * Trova o crea un dispositivo USP
      * Find or create USP device
+     * 
+     * @param string $endpointId USP endpoint ID
+     * @param Request $request HTTP request
+     * @param string|null $mtpType Optional MTP type (http, mqtt, websocket)
+     * @return CpeDevice
      */
-    protected function findOrCreateDevice(string $endpointId, Request $request): CpeDevice
+    protected function findOrCreateDevice(string $endpointId, Request $request, ?string $mtpType = null): CpeDevice
     {
         $device = CpeDevice::where('usp_endpoint_id', $endpointId)->first();
 
         if (!$device) {
             // Auto-register new USP device
             // USP devices don't have OUI like TR-069, use default value
-            $device = CpeDevice::create([
+            $deviceData = [
                 'serial_number' => 'USP-' . substr(md5($endpointId), 0, 10),
                 'oui' => '000000', // Default OUI for USP devices
                 'product_class' => 'USP Device',
@@ -155,19 +163,43 @@ class UspController extends Controller
                 'status' => 'online',
                 'last_inform' => now(),
                 'last_contact' => now(),
-            ]);
+            ];
+            
+            // Set MTP-specific fields
+            if ($mtpType === 'mqtt') {
+                $deviceData['mtp_type'] = 'mqtt';
+                $deviceData['mqtt_client_id'] = 'usp-agent-' . substr(md5($endpointId), 0, 12);
+            } elseif ($mtpType === 'websocket') {
+                $deviceData['mtp_type'] = 'websocket';
+            } else {
+                $deviceData['mtp_type'] = 'http'; // Default
+            }
+            
+            $device = CpeDevice::create($deviceData);
 
             Log::info('New USP device auto-registered', [
                 'endpoint_id' => $endpointId,
-                'device_id' => $device->id
+                'device_id' => $device->id,
+                'mtp_type' => $deviceData['mtp_type']
             ]);
         } else {
-            // Update last contact
-            $device->update([
+            // Update last contact and MTP type if specified
+            $updateData = [
                 'last_contact' => now(),
                 'status' => 'online',
                 'ip_address' => $request->ip()
-            ]);
+            ];
+            
+            // Update MTP type if specified and different
+            if ($mtpType && $device->mtp_type !== $mtpType) {
+                $updateData['mtp_type'] = $mtpType;
+                
+                if ($mtpType === 'mqtt' && empty($device->mqtt_client_id)) {
+                    $updateData['mqtt_client_id'] = 'usp-agent-' . substr(md5($endpointId), 0, 12);
+                }
+            }
+            
+            $device->update($updateData);
         }
 
         return $device;
@@ -495,6 +527,126 @@ class UspController extends Controller
         return response($pendingRequest->request_payload, 200)
             ->header('Content-Type', 'application/octet-stream')
             ->header('USP-Message-ID', $pendingRequest->msg_id);
+    }
+    
+    /**
+     * Handle MQTT Publish Bridge
+     * 
+     * Endpoint for MQTT clients and load testing to publish USP messages
+     * Simulates MQTT broker receive and processes the message
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function handleMqttPublish(Request $request): JsonResponse
+    {
+        try {
+            // Get binary payload or JSON data
+            $binaryPayload = $request->getContent();
+            
+            if (empty($binaryPayload)) {
+                return $this->errorResponse('Empty payload received', 400);
+            }
+            
+            Log::info('USP MQTT bridge: Message received', [
+                'size' => strlen($binaryPayload),
+                'content_type' => $request->header('Content-Type')
+            ]);
+            
+            // Deserialize USP Record
+            $record = $this->uspService->deserializeRecord($binaryPayload);
+            
+            // Extract message from record
+            $msg = $this->uspService->extractMessageFromRecord($record);
+            
+            if (!$msg) {
+                return $this->errorResponse('Failed to extract USP message from Record', 400);
+            }
+            
+            // Get message metadata
+            $fromId = $record->getFromId();
+            $toId = $record->getToId();
+            $msgType = $this->uspService->getMessageType($msg);
+            $msgId = $msg->getHeader()->getMsgId();
+            
+            Log::info('USP MQTT bridge: Message extracted', [
+                'from' => $fromId,
+                'to' => $toId,
+                'type' => $msgType,
+                'msg_id' => $msgId
+            ]);
+            
+            // Find or create device (MQTT MTP type)
+            $device = $this->findOrCreateDevice($fromId, $request, 'mqtt');
+            
+            // Process message (same logic as HTTP endpoint)
+            $responseMsg = match($msgType) {
+                'GET' => $this->handleGet($msg, $device),
+                'SET' => $this->handleSet($msg, $device),
+                'ADD' => $this->handleAdd($msg, $device),
+                'DELETE' => $this->handleDelete($msg, $device),
+                'OPERATE' => $this->handleOperate($msg, $device),
+                'NOTIFY' => $this->handleNotify($msg, $device),
+                'GET_RESP', 'SET_RESP', 'ADD_RESP', 'DELETE_RESP', 'OPERATE_RESP' => 
+                    $this->handleResponse($msg, $device),
+                default => $this->createErrorMessage($msgId, 9000, "Unsupported message type: {$msgType}")
+            };
+            
+            // If response message exists, publish it back via MQTT
+            $responsePublished = false;
+            $publishError = null;
+            
+            if ($responseMsg) {
+                try {
+                    // Publish response via MQTT transport
+                    $responseType = $this->uspService->getMessageType($responseMsg);
+                    $responseMsgId = $responseMsg->getHeader()->getMsgId();
+                    
+                    $this->mqttTransport->sendMessage($device, $responseMsg, $responseMsgId);
+                    
+                    $responsePublished = true;
+                    
+                    Log::info('USP MQTT bridge: Response published', [
+                        'device_id' => $device->id,
+                        'msg_id' => $responseMsgId,
+                        'type' => $responseType
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    $publishError = $e->getMessage();
+                    
+                    Log::error('USP MQTT bridge: Failed to publish response', [
+                        'device_id' => $device->id,
+                        'error' => $publishError
+                    ]);
+                }
+            }
+            
+            // Return JSON response (for load testing confirmation)
+            $responseData = [
+                'status' => 'success',
+                'message' => 'USP message processed via MQTT bridge',
+                'msg_id' => $msgId,
+                'msg_type' => $msgType,
+                'device_id' => $device->id,
+                'response_published' => $responsePublished,
+                'response_type' => $responseMsg ? $this->uspService->getMessageType($responseMsg) : null
+            ];
+            
+            if ($publishError) {
+                $responseData['publish_error'] = $publishError;
+            }
+            
+            return response()->json($responseData, 200);
+            
+        } catch (\Exception $e) {
+            Log::error('USP MQTT bridge: Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return $this->errorResponse($e->getMessage(), 500);
+        }
     }
     
     /**
