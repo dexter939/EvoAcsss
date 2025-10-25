@@ -17,6 +17,10 @@ import {
     generateMacAddress,
     generateTr069Inform,
     generateUspGetRequest,
+    generateUspSetRequest,
+    generateUspGetInstancesRequest,
+    generateUspGetSupportedDmRequest,
+    generateUspGetSupportedProtocolRequest,
     generateDeviceData,
     generateSearchQuery,
     generateParameterBatch
@@ -162,37 +166,92 @@ function executeTr069Session(deviceSerial, deviceMac) {
 }
 
 /**
- * Execute TR-369 USP session (HTTP transport)
+ * Execute TR-369 USP session
+ * Supports both HTTP (70%) and MQTT (30%) transports with all 5 message types
  */
 function executeTr369Session(deviceSerial, deviceId) {
     group('TR-369 USP Session', function () {
-        // Generate USP Get request
-        const paths = generateParameterBatch(3);
-        const uspRequest = generateUspGetRequest(deviceId, paths);
-        const startTime = Date.now();
+        // Select transport: 70% HTTP, 30% MQTT
+        const useHttp = Math.random() < 0.7;
         
-        // Simulate USP HTTP transport
-        // Note: In production, this would be actual Protocol Buffers binary
-        const response = http.post(
-            `${config.baseUrl}/tr369/usp`,
-            JSON.stringify(uspRequest),
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-USP-Protocol': 'HTTP',
-                },
-                tags: { protocol: 'tr369', transport: 'http' },
-                timeout: '30s',
-            }
-        );
+        // Select operation type
+        const rand = Math.random();
+        let uspRequest;
+        let operation;
+        
+        if (rand < 0.4) {
+            // 40% - GET
+            const paths = generateParameterBatch(3);
+            uspRequest = generateUspGetRequest(deviceId, paths);
+            operation = 'get';
+        } else if (rand < 0.6) {
+            // 20% - SET
+            const parameters = {
+                ProvisioningCode: `PROV-${deviceSerial}`,
+                PeriodicInformInterval: 300,
+            };
+            uspRequest = generateUspSetRequest(deviceId, parameters);
+            operation = 'set';
+        } else if (rand < 0.75) {
+            // 15% - GET_INSTANCES
+            uspRequest = generateUspGetInstancesRequest(deviceId);
+            operation = 'get_instances';
+        } else if (rand < 0.9) {
+            // 15% - GET_SUPPORTED_DM
+            uspRequest = generateUspGetSupportedDmRequest(deviceId);
+            operation = 'get_supported_dm';
+        } else {
+            // 10% - GET_SUPPORTED_PROTOCOL
+            uspRequest = generateUspGetSupportedProtocolRequest(deviceId);
+            operation = 'get_supported_protocol';
+        }
+        
+        const startTime = Date.now();
+        let response;
+        
+        if (useHttp) {
+            // HTTP transport
+            response = http.post(
+                `${config.baseUrl}/tr369/usp`,
+                JSON.stringify(uspRequest),
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-USP-Protocol': 'HTTP',
+                        'X-USP-Operation': operation,
+                    },
+                    tags: { protocol: 'tr369', transport: 'http', operation: operation },
+                    timeout: '30s',
+                }
+            );
+        } else {
+            // MQTT transport (via bridge)
+            response = http.post(
+                `${config.baseUrl}/tr369/mqtt/publish`,
+                JSON.stringify({
+                    topic: `usp/controller/${deviceId}`,
+                    payload: uspRequest,
+                    qos: 1,
+                }),
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-USP-Protocol': 'MQTT',
+                        'X-USP-Operation': operation,
+                    },
+                    tags: { protocol: 'tr369', transport: 'mqtt', operation: operation },
+                    timeout: '30s',
+                }
+            );
+        }
         
         const duration = Date.now() - startTime;
-        // 200 = success, 404 = endpoint not implemented (acceptable for infrastructure testing)
-        const success = [200, 404].includes(response.status);
+        // 200/201 = success, 404 = endpoint not implemented (acceptable for infrastructure testing)
+        const success = [200, 201, 404].includes(response.status);
         
         check(response, {
-            'TR-369 USP success': (r) => r.status === 200 || r.status === 404,  // 404 if endpoint not implemented
-        }) && recordUspOperation('http', duration, success);
+            'TR-369 USP success': (r) => [200, 201, 404].includes(r.status),
+        }) && recordUspOperation(useHttp ? 'http' : 'mqtt', duration, success);
     });
 }
 

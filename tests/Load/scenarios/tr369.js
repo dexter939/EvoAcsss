@@ -14,6 +14,9 @@ import {
     generateSerialNumber,
     generateUspGetRequest,
     generateUspSetRequest,
+    generateUspGetInstancesRequest,
+    generateUspGetSupportedDmRequest,
+    generateUspGetSupportedProtocolRequest,
     generateParameterBatch
 } from '../utils/generators.js';
 import { recordUspOperation, tr369Metrics } from '../utils/metrics.js';
@@ -115,23 +118,24 @@ export default function (data) {
 
 /**
  * Execute USP over HTTP transport
+ * Operation distribution: 40% GET, 20% SET, 15% GET_INSTANCES, 15% GET_SUPPORTED_DM, 10% GET_SUPPORTED_PROTOCOL
  */
 function executeUspHttpTransport(deviceId, deviceSerial) {
     group('TR-369 USP HTTP Transport', function () {
-        // Randomly select Get or Set operation
-        const isGet = Math.random() < 0.7;  // 70% Get, 30% Set
+        // Select operation based on distribution
+        const rand = Math.random();
         
         let uspRequest;
         let operation;
         
-        if (isGet) {
-            // USP Get request
+        if (rand < 0.4) {
+            // 40% - USP Get request
             const paths = generateParameterBatch(Math.floor(Math.random() * 5) + 1);
             uspRequest = generateUspGetRequest(deviceId, paths);
             operation = 'get';
             tr369Metrics.uspGetRequests.add(1);
-        } else {
-            // USP Set request
+        } else if (rand < 0.6) {
+            // 20% - USP Set request
             const parameters = {
                 ProvisioningCode: `PROV-${deviceSerial}`,
                 PeriodicInformInterval: 300,
@@ -139,6 +143,18 @@ function executeUspHttpTransport(deviceId, deviceSerial) {
             uspRequest = generateUspSetRequest(deviceId, parameters);
             operation = 'set';
             tr369Metrics.uspSetRequests.add(1);
+        } else if (rand < 0.75) {
+            // 15% - USP GET_INSTANCES request (multi-instance objects)
+            uspRequest = generateUspGetInstancesRequest(deviceId);
+            operation = 'get_instances';
+        } else if (rand < 0.9) {
+            // 15% - USP GET_SUPPORTED_DM request (data model metadata)
+            uspRequest = generateUspGetSupportedDmRequest(deviceId);
+            operation = 'get_supported_dm';
+        } else {
+            // 10% - USP GET_SUPPORTED_PROTOCOL request (protocol version)
+            uspRequest = generateUspGetSupportedProtocolRequest(deviceId);
+            operation = 'get_supported_protocol';
         }
         
         const startTime = Date.now();
@@ -178,33 +194,66 @@ function executeUspHttpTransport(deviceId, deviceSerial) {
 
 /**
  * Execute USP over MQTT transport
- * Note: K6 doesn't have native MQTT support, so we simulate with HTTP
+ * Note: K6 doesn't have native MQTT support, so we simulate with HTTP bridge
+ * Tests new MQTT bridge endpoint with all 5 USP message types
  */
 function executeUspMqttTransport(deviceId, deviceSerial) {
     group('TR-369 USP MQTT Transport (Simulated)', function () {
-        // Generate USP Get request
-        const paths = generateParameterBatch(2);
-        const uspRequest = generateUspGetRequest(deviceId, paths);
+        // Select operation randomly (same distribution as HTTP)
+        const rand = Math.random();
+        
+        let uspRequest;
+        let operation;
+        
+        if (rand < 0.4) {
+            // 40% - GET
+            const paths = generateParameterBatch(2);
+            uspRequest = generateUspGetRequest(deviceId, paths);
+            operation = 'get';
+        } else if (rand < 0.6) {
+            // 20% - SET
+            const parameters = {
+                ProvisioningCode: `PROV-${deviceSerial}`,
+                PeriodicInformInterval: 300,
+            };
+            uspRequest = generateUspSetRequest(deviceId, parameters);
+            operation = 'set';
+        } else if (rand < 0.75) {
+            // 15% - GET_INSTANCES
+            uspRequest = generateUspGetInstancesRequest(deviceId);
+            operation = 'get_instances';
+        } else if (rand < 0.9) {
+            // 15% - GET_SUPPORTED_DM
+            uspRequest = generateUspGetSupportedDmRequest(deviceId);
+            operation = 'get_supported_dm';
+        } else {
+            // 10% - GET_SUPPORTED_PROTOCOL
+            uspRequest = generateUspGetSupportedProtocolRequest(deviceId);
+            operation = 'get_supported_protocol';
+        }
         
         const startTime = Date.now();
         
         // Simulate MQTT publish via HTTP POST to MQTT bridge
-        // In production, this would use actual MQTT client
+        // Note: Real implementation uses base64-encoded Protocol Buffers
+        // For load testing, JSON payload is sufficient to test infrastructure
         const response = http.post(
             `${config.baseUrl}/tr369/mqtt/publish`,
             JSON.stringify({
                 topic: `usp/controller/${deviceId}`,
-                payload: uspRequest,
+                payload: uspRequest,  // Mock payload for load testing
                 qos: 1,
             }),
             {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-USP-Protocol': 'MQTT',
+                    'X-USP-Operation': operation,
                 },
                 tags: { 
                     transport: 'usp_mqtt', 
                     protocol: 'tr369',
+                    operation: operation,
                 },
                 timeout: '30s',
             }

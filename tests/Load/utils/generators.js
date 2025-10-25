@@ -185,6 +185,80 @@ export function generateUspSetRequest(deviceId, parameters) {
 }
 
 /**
+ * Generate TR-369 USP GET_INSTANCES request
+ * Tests multi-instance object enumeration
+ */
+export function generateUspGetInstancesRequest(deviceId, objectPaths) {
+    return {
+        header: {
+            msg_id: `get_instances-${Date.now()}-${randomInt(1000, 9999)}`,
+            msg_type: 'GET_INSTANCES',
+        },
+        body: {
+            request: {
+                get_instances: {
+                    obj_paths: objectPaths || [
+                        'Device.WiFi.SSID.',
+                        'Device.Ethernet.Interface.',
+                    ],
+                    first_level_only: false,
+                },
+            },
+        },
+        from_id: `controller::1`,
+        to_id: `device::${deviceId}`,
+    };
+}
+
+/**
+ * Generate TR-369 USP GET_SUPPORTED_DM request
+ * Tests data model metadata retrieval
+ */
+export function generateUspGetSupportedDmRequest(deviceId, objectPaths) {
+    return {
+        header: {
+            msg_id: `get_supported_dm-${Date.now()}-${randomInt(1000, 9999)}`,
+            msg_type: 'GET_SUPPORTED_DM',
+        },
+        body: {
+            request: {
+                get_supported_dm: {
+                    obj_paths: objectPaths || ['Device.DeviceInfo.'],
+                    first_level_only: true,
+                    return_commands: true,
+                    return_events: true,
+                    return_params: true,
+                },
+            },
+        },
+        from_id: `controller::1`,
+        to_id: `device::${deviceId}`,
+    };
+}
+
+/**
+ * Generate TR-369 USP GET_SUPPORTED_PROTOCOL request
+ * Tests USP protocol version negotiation
+ */
+export function generateUspGetSupportedProtocolRequest(deviceId) {
+    return {
+        header: {
+            msg_id: `get_supported_protocol-${Date.now()}-${randomInt(1000, 9999)}`,
+            msg_type: 'GET_SUPPORTED_PROTOCOL',
+        },
+        body: {
+            request: {
+                get_supported_protocol: {
+                    controller_supported_protocol_versions: '1.0,1.1,1.2,1.3',
+                },
+            },
+        },
+        from_id: `controller::1`,
+        to_id: `device::${deviceId}`,
+    };
+}
+
+/**
  * Generate realistic device data for API creation
  */
 export function generateDeviceData(index) {
@@ -258,6 +332,9 @@ export default {
     generateTr069GetParameterValues,
     generateUspGetRequest,
     generateUspSetRequest,
+    generateUspGetInstancesRequest,
+    generateUspGetSupportedDmRequest,
+    generateUspGetSupportedProtocolRequest,
     generateDeviceData,
     generateSearchQuery,
     generateTr181ParameterPath,

@@ -148,19 +148,26 @@ k6 run tests/Load/scenarios/tr069.js
 
 Testa USP over HTTP/MQTT/WebSocket con Protocol Buffers encoding.
 
-**⚠️ Prerequisiti per Functional Validation**:
-- USP HTTP endpoint implementato: `/tr369/usp`
-- USP MQTT bridge implementato: `/tr369/mqtt/publish`
-- USP WebSocket server running: `ws://localhost:8080/usp`
+**✅ Endpoints Implementati**:
+- USP HTTP endpoint: `/tr369/usp` ✅
+- USP MQTT bridge: `/tr369/mqtt/publish` ✅
+- USP WebSocket server: `php artisan usp:websocket-server` ✅
 
-**Infrastructure Hardening Mode** (default - alcuni endpoints non implementati):
+**🎯 USP Message Types Supportati**:
+1. **GET** (40%) - Parameter value retrieval
+2. **SET** (20%) - Parameter configuration
+3. **GET_INSTANCES** (15%) - Multi-instance object enumeration
+4. **GET_SUPPORTED_DM** (15%) - TR-181 data model metadata
+5. **GET_SUPPORTED_PROTOCOL** (10%) - USP protocol version negotiation
+
+**Infrastructure Hardening Mode** (default - focus on performance):
 ```bash
 # Run with performance thresholds only
 ./tests/Load/run-tests.sh tr369
 # or directly: k6 run tests/Load/scenarios/tr369.js
 ```
 
-**Functional Validation Mode** (tutti endpoints implementati):
+**Functional Validation Mode** (validazione completa):
 ```bash
 # Step 1: Uncomment functional thresholds in tr369.js (see thresholds section)
 # Step 2: Run test
@@ -168,9 +175,11 @@ Testa USP over HTTP/MQTT/WebSocket con Protocol Buffers encoding.
 ```
 
 **Transports Tested**:
-- HTTP POST (bulk operations) - 40% of traffic
-- MQTT pub/sub (real-time) - 30% of traffic
-- WebSocket (persistent connections) - 30% of traffic
+- **HTTP POST** (40%) - Bulk operations, stateless requests
+- **MQTT pub/sub** (30%) - Real-time messaging via broker
+- **WebSocket** (30%) - Persistent bidirectional connections
+
+**Note**: Mock JSON payloads sono usati per load testing infrastructure. In produzione, USP usa base64-encoded Protocol Buffers binary format per tutti i transports.
 
 **Thresholds** (Functional Validation Mode ONLY):
 - ✅ HTTP p95 < 400ms, p99 < 800ms
@@ -181,8 +190,8 @@ Testa USP over HTTP/MQTT/WebSocket con Protocol Buffers encoding.
 
 **Thresholds** (Infrastructure Hardening Mode):
 - ✅ Response time metrics (performance validation)
-- ⚠️  Error rate skipped (404s acceptable)
-- ⚠️  Success rate skipped (endpoints may not exist)
+- ⚠️  Error rate skipped (404s acceptable for unimplemented operations)
+- ⚠️  Success rate skipped (focus on infrastructure capacity)
 
 ### 4. Mixed Protocol Scenario
 
@@ -192,10 +201,15 @@ Simula produzione reale con mix di TR-069, TR-369, REST API.
 k6 run tests/Load/scenarios/mixed.js
 ```
 
-**Distribution**:
-- 60% TR-069 sessions
-- 30% TR-369 USP
-- 10% REST API calls
+**Protocol Distribution**:
+- **60% TR-069 sessions** (legacy CWMP devices)
+- **30% TR-369 USP** (modern devices)
+  - 70% HTTP transport
+  - 30% MQTT transport
+  - All 5 message types (GET, SET, GET_INSTANCES, GET_SUPPORTED_DM, GET_SUPPORTED_PROTOCOL)
+- **10% REST API calls** (admin/management operations)
+
+**Peak Load Target**: 100,000 concurrent devices
 
 ## Scalability Testing
 
