@@ -51,3 +51,12 @@ scrape_configs:
     static_configs:
       - targets:
           - 'redis-exporter:9121'
+
+  # K6 Load Testing metrics (when running tests)
+  - job_name: 'k6-load-testing'
+    static_configs:
+      - targets:
+          - 'localhost:9091'  # K6 Prometheus exporter
+    metrics_path: '/metrics'
+    scrape_interval: 5s  # Faster scraping for real-time load test monitoring
+    scrape_timeout: 3s

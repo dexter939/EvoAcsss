@@ -388,6 +388,175 @@ Prerequisites:
 - ✅ Error rate < 1% for ALL tests
 - ✅ Success rate > 99% for ALL tests
 
+## Prometheus/Grafana Integration
+
+### Overview
+
+K6 load test metrics possono essere esportati a Prometheus e visualizzati in Grafana in real-time.
+
+**Architecture**:
+```
+K6 Test → JSON Output → Prometheus Exporter → Prometheus → Grafana Dashboard
+```
+
+### Quick Start
+
+**Step 1: Start Monitoring Stack**
+```bash
+# Start Prometheus & Grafana
+docker-compose -f docker-compose.monitoring.yml up -d
+
+# Verify services
+curl http://localhost:9090  # Prometheus
+curl http://localhost:3000  # Grafana (admin/admin)
+```
+
+**Step 2: Run Load Test with Prometheus Export**
+```bash
+# Run test with automatic Prometheus export
+./tests/Load/run-with-prometheus.sh mixed
+
+# Available scenarios:
+./tests/Load/run-with-prometheus.sh smoke   # Quick test
+./tests/Load/run-with-prometheus.sh api     # REST API
+./tests/Load/run-with-prometheus.sh tr069   # TR-069
+./tests/Load/run-with-prometheus.sh tr369   # TR-369
+./tests/Load/run-with-prometheus.sh mixed   # All protocols
+```
+
+**Step 3: View Results in Grafana**
+```
+1. Open: http://localhost:3000
+2. Login: admin/admin (change password on first login)
+3. Navigate to: Dashboards → ACS - K6 Load Testing
+4. Watch real-time metrics during test execution
+```
+
+### Available Metrics
+
+**Built-in K6 Metrics**:
+- `k6_http_req_duration{quantile}` - HTTP response time (p50, p95, p99)
+- `k6_http_reqs_total` - Total HTTP requests
+- `k6_http_req_failed_total` - Failed requests
+- `k6_vus` - Current virtual users
+- `k6_iterations_total` - Total iterations
+
+**Custom Protocol Metrics**:
+- `k6_tr069_inform_duration{quantile}` - TR-069 Inform duration
+- `k6_tr069_inform_success_rate` - TR-069 success rate
+- `k6_tr369_usp_operation_duration{quantile}` - TR-369 USP duration
+- `k6_tr369_http_messages_total` - TR-369 HTTP transport messages
+- `k6_tr369_mqtt_messages_total` - TR-369 MQTT transport messages
+- `k6_tr369_websocket_messages_total` - TR-369 WebSocket messages
+- `k6_api_request_duration{quantile}` - API request duration
+
+### Grafana Dashboard
+
+**Dashboard**: ACS - K6 Load Testing
+
+**Panels**:
+1. **Virtual Users** - Current VU count over time
+2. **Request Rate** - Requests per second
+3. **Error Rate** - Percentage of failed requests (with alerts)
+4. **HTTP Response Time** - p50, p95, p99 percentiles
+5. **Total Requests** - Cumulative request count
+6. **Total Iterations** - Cumulative iteration count
+7. **TR-069 Inform Duration** - CWMP protocol performance
+8. **TR-369 USP Duration** - USP protocol performance
+9. **API Request Duration** - REST API performance
+10. **TR-369 Transport Messages** - HTTP/MQTT/WebSocket distribution
+11. **Success Rates by Protocol** - TR-069/TR-369/API success rates
+
+**Alerts**:
+- High HTTP Response Time (p95 > 800ms)
+
+### Manual Prometheus Export
+
+Se preferisci più controllo, puoi eseguire manualmente:
+
+```bash
+# Terminal 1: Run K6 with JSON output
+k6 run --out json=test-results.json tests/Load/scenarios/mixed.js
+
+# Terminal 2: Start Prometheus exporter
+node tests/Load/utils/prometheus-exporter.js test-results.json
+
+# Terminal 3: Query metrics
+curl http://localhost:9091/metrics
+curl http://localhost:9091/health
+```
+
+### Prometheus Configuration
+
+**Scrape Configuration** (`monitoring/prometheus/prometheus.yml`):
+```yaml
+scrape_configs:
+  - job_name: 'k6-load-testing'
+    static_configs:
+      - targets: ['localhost:9091']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    scrape_timeout: 3s
+```
+
+**Query Examples**:
+```promql
+# Average response time (last 5 minutes)
+avg(k6_http_req_duration{quantile="0.95"}[5m])
+
+# Error rate percentage
+rate(k6_http_req_failed_total[1m]) / rate(k6_http_reqs_total[1m]) * 100
+
+# Requests per second
+rate(k6_http_reqs_total[1m])
+
+# Virtual users trend
+k6_vus
+
+# TR-369 transport distribution
+sum(rate(k6_tr369_http_messages_total[5m]))
+sum(rate(k6_tr369_mqtt_messages_total[5m]))
+sum(rate(k6_tr369_websocket_messages_total[5m]))
+```
+
+### Production Monitoring
+
+Per monitoraggio production durante load testing:
+
+**1. Long-term Storage**:
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 30s
+  storage:
+    tsdb:
+      retention.time: 30d
+```
+
+**2. Alerting Rules** (`monitoring/prometheus/rules/k6-alerts.yml`):
+```yaml
+groups:
+  - name: k6_load_testing
+    rules:
+      - alert: HighErrorRate
+        expr: rate(k6_http_req_failed_total[5m]) > 0.05
+        for: 5m
+        annotations:
+          summary: "K6 error rate > 5%"
+      
+      - alert: HighResponseTime
+        expr: k6_http_req_duration{quantile="0.95"} > 1000
+        for: 5m
+        annotations:
+          summary: "K6 p95 response time > 1s"
+```
+
+**3. Export Reports**:
+```bash
+# Export Grafana dashboard as PDF/PNG
+# Grafana → Dashboard → Share → Export
+```
+
 ## Troubleshooting
 
 ### K6 Errors

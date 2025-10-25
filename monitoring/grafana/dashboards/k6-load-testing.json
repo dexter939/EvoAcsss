@@ -1,0 +1,387 @@
+{
+  "dashboard": {
+    "title": "ACS - K6 Load Testing",
+    "tags": ["acs", "load-testing", "k6", "performance"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "5s",
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "title": "Virtual Users (VUs)",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "k6_vus",
+            "refId": "A",
+            "legendFormat": "Active VUs"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "VUs"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "title": "Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(k6_http_reqs_total[1m])",
+            "refId": "A",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(k6_http_req_failed_total[1m]) / rate(k6_http_reqs_total[1m]) * 100",
+            "refId": "A",
+            "legendFormat": "Error %"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "label": "Error Rate"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "HTTP Response Time (p95)",
+        "type": "graph",
+        "gridPos": {"h": 7, "w": 12, "x": 0, "y": 6},
+        "targets": [
+          {
+            "expr": "k6_http_req_duration{quantile=\"0.95\"}",
+            "refId": "A",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "k6_http_req_duration{quantile=\"0.99\"}",
+            "refId": "B",
+            "legendFormat": "p99"
+          },
+          {
+            "expr": "k6_http_req_duration{quantile=\"0.5\"}",
+            "refId": "C",
+            "legendFormat": "p50 (median)"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "label": "Response Time"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "p99"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "p95"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "p50 (median)"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]
+            }
+          ]
+        },
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [800], "type": "gt"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "name": "High HTTP Response Time",
+          "noDataState": "no_data"
+        }
+      },
+      {
+        "title": "Total Requests",
+        "type": "stat",
+        "gridPos": {"h": 7, "w": 6, "x": 12, "y": 6},
+        "targets": [
+          {
+            "expr": "k6_http_reqs_total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "blue", "value": null},
+                {"color": "green", "value": 10000},
+                {"color": "yellow", "value": 100000}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background"
+        }
+      },
+      {
+        "title": "Total Iterations",
+        "type": "stat",
+        "gridPos": {"h": 7, "w": 6, "x": 18, "y": 6},
+        "targets": [
+          {
+            "expr": "k6_iterations_total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "blue", "value": null},
+                {"color": "green", "value": 1000}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background"
+        }
+      },
+      {
+        "title": "TR-069 Inform Duration (p95)",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 13},
+        "targets": [
+          {
+            "expr": "k6_tr069_inform_duration{quantile=\"0.95\"}",
+            "refId": "A",
+            "legendFormat": "TR-069 p95"
+          },
+          {
+            "expr": "k6_tr069_inform_duration{quantile=\"0.99\"}",
+            "refId": "B",
+            "legendFormat": "TR-069 p99"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "label": "Duration"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "title": "TR-369 USP Duration (p95)",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 13},
+        "targets": [
+          {
+            "expr": "k6_tr369_usp_operation_duration{quantile=\"0.95\"}",
+            "refId": "A",
+            "legendFormat": "TR-369 p95"
+          },
+          {
+            "expr": "k6_tr369_usp_operation_duration{quantile=\"0.99\"}",
+            "refId": "B",
+            "legendFormat": "TR-369 p99"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "label": "Duration"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "title": "API Request Duration (p95)",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 13},
+        "targets": [
+          {
+            "expr": "k6_api_request_duration{quantile=\"0.95\"}",
+            "refId": "A",
+            "legendFormat": "API p95"
+          },
+          {
+            "expr": "k6_api_request_duration{quantile=\"0.99\"}",
+            "refId": "B",
+            "legendFormat": "API p99"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "label": "Duration"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "title": "TR-369 Transport Messages",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 19},
+        "targets": [
+          {
+            "expr": "rate(k6_tr369_http_messages_total[1m])",
+            "refId": "A",
+            "legendFormat": "HTTP"
+          },
+          {
+            "expr": "rate(k6_tr369_mqtt_messages_total[1m])",
+            "refId": "B",
+            "legendFormat": "MQTT"
+          },
+          {
+            "expr": "rate(k6_tr369_websocket_messages_total[1m])",
+            "refId": "C",
+            "legendFormat": "WebSocket"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Messages/sec"},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "stacking": {"mode": "normal"}
+            }
+          }
+        }
+      },
+      {
+        "title": "Success Rates by Protocol",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 19},
+        "targets": [
+          {
+            "expr": "k6_tr069_inform_success_rate",
+            "refId": "A",
+            "legendFormat": "TR-069"
+          },
+          {
+            "expr": "k6_tr369_usp_operation_success_rate",
+            "refId": "B",
+            "legendFormat": "TR-369"
+          },
+          {
+            "expr": "k6_api_request_success_rate",
+            "refId": "C",
+            "legendFormat": "API"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "Success Rate", "min": 0, "max": 1},
+          {"show": false}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.95},
+                {"color": "green", "value": 0.99}
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}
