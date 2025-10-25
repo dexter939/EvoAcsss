@@ -521,6 +521,212 @@ curl -X POST http://localhost:9090/-/reload
 9. **Archive old metrics** to object storage for long-term retention
 10. **Train team** on dashboard usage and alert response
 
+---
+
+## Load Testing Integration
+
+### Overview
+
+Il sistema ACS include un comprehensive load testing framework basato su K6 con integrazione Prometheus/Grafana per real-time monitoring dei test results.
+
+### Architecture
+
+```
+K6 Load Test → JSON Output → Prometheus Exporter → Prometheus → Grafana Dashboard
+                                                           ↓
+                                                    "ACS - K6 Load Testing"
+```
+
+### Quick Start
+
+**Step 1: Start Monitoring Stack**
+```bash
+docker-compose -f docker-compose.monitoring.yml up -d
+```
+
+**Step 2: Run Load Test with Prometheus Export**
+```bash
+./tests/Load/run-with-prometheus.sh mixed
+```
+
+**Step 3: View Results in Grafana**
+- Open: http://localhost:3000
+- Dashboard: "ACS - K6 Load Testing"
+- Watch real-time metrics during test execution
+
+### Available Load Tests
+
+| Scenario | Load | Duration | Purpose |
+|----------|------|----------|---------|
+| smoke | 100 users | 5 min | Quick validation |
+| api | 1K users | 28 min | REST API testing |
+| tr069 | 50K devices | 55 min | TR-069 CWMP protocol |
+| tr369 | 30K sessions | 50 min | TR-369 USP (HTTP/MQTT/WebSocket) |
+| mixed | 100K total | 75 min | Production simulation |
+| soak | 50K devices | 24 hours | Stability testing |
+
+**Run Tests**:
+```bash
+# With Prometheus integration
+./tests/Load/run-with-prometheus.sh <scenario>
+
+# Manual execution
+./tests/Load/run-tests.sh <scenario>
+```
+
+### K6 Metrics Exported to Prometheus
+
+**Built-in K6 Metrics**:
+- `k6_http_req_duration{quantile}` - HTTP response time percentiles
+- `k6_http_reqs_total` - Total HTTP requests
+- `k6_http_req_failed_total` - Failed requests
+- `k6_vus` - Current virtual users
+- `k6_iterations_total` - Total iterations
+
+**Custom Protocol Metrics**:
+- `k6_tr069_inform_duration{quantile}` - TR-069 Inform performance
+- `k6_tr069_inform_success_rate` - TR-069 success rate
+- `k6_tr369_usp_operation_duration{quantile}` - TR-369 USP performance
+- `k6_tr369_http_messages_total` - HTTP transport messages
+- `k6_tr369_mqtt_messages_total` - MQTT transport messages
+- `k6_tr369_websocket_messages_total` - WebSocket transport messages
+- `k6_api_request_duration{quantile}` - REST API performance
+
+### Grafana Dashboard: "ACS - K6 Load Testing"
+
+**Panels**:
+1. Virtual Users - Current VU count over time
+2. Request Rate - Requests per second
+3. Error Rate - Failed request percentage (with alerts)
+4. HTTP Response Time - p50/p95/p99 percentiles
+5. Total Requests - Cumulative count
+6. TR-069 Inform Duration - CWMP protocol performance
+7. TR-369 USP Duration - USP protocol performance
+8. API Request Duration - REST API performance
+9. TR-369 Transport Messages - HTTP/MQTT/WebSocket distribution
+10. Success Rates by Protocol - TR-069/TR-369/API
+
+**Alert**: High HTTP Response Time (p95 > 800ms)
+
+### PromQL Queries for Load Testing
+
+```promql
+# Average response time (last 5 minutes)
+avg(k6_http_req_duration{quantile="0.95"}[5m])
+
+# Error rate percentage
+rate(k6_http_req_failed_total[1m]) / rate(k6_http_reqs_total[1m]) * 100
+
+# Requests per second
+rate(k6_http_reqs_total[1m])
+
+# Virtual users trend
+k6_vus
+
+# TR-369 transport distribution
+sum(rate(k6_tr369_http_messages_total[5m]))
+sum(rate(k6_tr369_mqtt_messages_total[5m]))
+sum(rate(k6_tr369_websocket_messages_total[5m]))
+```
+
+### Prometheus Scrape Configuration
+
+K6 metrics exporter is configured in `monitoring/prometheus/prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: 'k6-load-testing'
+    static_configs:
+      - targets: ['localhost:9091']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    scrape_timeout: 3s
+```
+
+### Performance Baseline Targets
+
+**Carrier-Grade Targets (100K Devices)**:
+
+| Metric | Target | Description |
+|--------|--------|-------------|
+| **Response Time p95** | < 500ms | 95th percentile response time |
+| **Response Time p99** | < 1000ms | 99th percentile response time |
+| **Error Rate** | < 1% | Failed requests percentage |
+| **Success Rate** | > 99% | Successful requests percentage |
+| **Throughput** | > 1K req/s | Requests per second |
+| **CPU Usage** | < 80% | Average CPU utilization |
+| **Memory Usage** | < 80% | Memory utilization |
+| **Cache Hit Ratio** | > 80% | Cache effectiveness |
+
+### Load Testing Documentation
+
+- **Setup Guide**: tests/Load/README.md
+- **Performance Results**: tests/Load/PERFORMANCE-RESULTS.md
+- **Bottleneck Identification**: tests/Load/BOTTLENECKS.md
+- **Optimization Guide**: tests/Load/OPTIMIZATION.md
+- **Production Readiness**: tests/Load/PRODUCTION-READINESS.md
+
+### Troubleshooting Load Tests
+
+**Issue**: K6 metrics not appearing in Prometheus
+
+**Solution**:
+```bash
+# Check exporter running
+curl http://localhost:9091/health
+
+# Check Prometheus targets
+# Open http://localhost:9090/targets
+# Verify k6-load-testing target is UP
+
+# Restart Prometheus if needed
+docker-compose -f docker-compose.monitoring.yml restart prometheus
+```
+
+**Issue**: Grafana dashboard shows "No data"
+
+**Solution**:
+```bash
+# Verify data source configured
+# Grafana → Configuration → Data Sources → Prometheus
+# URL should be: http://prometheus:9090
+
+# Test connection
+# Click "Save & Test" - should show "Data source is working"
+
+# Import dashboard
+# Grafana → Dashboards → Import
+# Upload: monitoring/grafana/dashboards/k6-load-testing.json
+```
+
+### Integration with Production Monitoring
+
+**Correlate Load Test Results with Production Metrics**:
+
+```promql
+# Compare load test response time vs production
+k6_http_req_duration{quantile="0.95"}  # Load test
+acs_http_request_duration{quantile="0.95"}  # Production
+
+# Compare load test throughput vs production
+rate(k6_http_reqs_total[1m])  # Load test
+rate(acs_http_requests_total[1m])  # Production
+
+# Validate capacity planning
+k6_vus  # Load test users
+acs_devices_online  # Production devices
+```
+
+**Best Practices**:
+1. Run load tests in staging environment identical to production
+2. Use production-like data (anonymized)
+3. Compare load test baselines with production metrics
+4. Set alert thresholds based on load test results
+5. Re-run load tests after major changes
+6. Document performance regressions
+
+---
+
 ## Resources
 
 - [Prometheus Documentation](https://prometheus.io/docs/)
