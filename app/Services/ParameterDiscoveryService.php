@@ -259,4 +259,215 @@ class ParameterDiscoveryService
                 ->count()
         ];
     }
+
+    /**
+     * Lista comuni oggetti multi-instance TR-181
+     * Common TR-181 multi-instance objects list
+     */
+    protected const MULTI_INSTANCE_OBJECTS = [
+        'Device.WiFi.SSID.',
+        'Device.WiFi.AccessPoint.',
+        'Device.Ethernet.Interface.',
+        'Device.Ethernet.Link.',
+        'Device.IP.Interface.',
+        'Device.DHCPv4.Server.Pool.',
+        'Device.Hosts.Host.',
+        'Device.NAT.PortMapping.',
+        'Device.Routing.Router.',
+        'Device.Firewall.Chain.',
+    ];
+
+    /**
+     * Scopre automaticamente istanze di oggetti multi-instance
+     * Automatically discover multi-instance object instances
+     * 
+     * @param CpeDevice $device Dispositivo target
+     * @param array|null $objectPaths Paths specifici (null = tutti comuni)
+     * @return array Risultati discovery
+     */
+    public function discoverMultiInstanceObjects(CpeDevice $device, ?array $objectPaths = null): array
+    {
+        $objectsToDiscover = $objectPaths ?? self::MULTI_INSTANCE_OBJECTS;
+        $results = [
+            'device_id' => $device->id,
+            'objects_discovered' => 0,
+            'instances_found' => 0,
+            'objects' => [],
+        ];
+
+        foreach ($objectsToDiscover as $objectPath) {
+            $objectPath = rtrim($objectPath, '.') . '.';
+            
+            // Query capabilities per trovare istanze esistenti
+            $capabilities = $device->deviceCapabilities()
+                ->where('parameter_path', 'LIKE', $objectPath . '%')
+                ->get();
+
+            if ($capabilities->isEmpty()) {
+                continue;
+            }
+
+            // Estrai numeri istanza dai paths
+            $instances = [];
+            foreach ($capabilities as $cap) {
+                $relativePath = substr($cap->parameter_path, strlen($objectPath));
+                if (preg_match('/^(\d+)\./', $relativePath, $matches)) {
+                    $instanceNum = $matches[1];
+                    if (!in_array($instanceNum, $instances)) {
+                        $instances[] = $instanceNum;
+                    }
+                }
+            }
+
+            if (!empty($instances)) {
+                $results['objects'][$objectPath] = [
+                    'instance_count' => count($instances),
+                    'instances' => $instances,
+                    'parameter_count' => $capabilities->count(),
+                ];
+                $results['objects_discovered']++;
+                $results['instances_found'] += count($instances);
+            }
+        }
+
+        Log::info('Multi-instance objects discovered', [
+            'device_id' => $device->id,
+            'objects_discovered' => $results['objects_discovered'],
+            'total_instances' => $results['instances_found'],
+        ]);
+
+        return $results;
+    }
+
+    /**
+     * Trigger auto-discovery di un oggetto multi-instance specifico
+     * Trigger auto-discovery of a specific multi-instance object
+     * 
+     * @param CpeDevice $device
+     * @param string $objectPath Es. Device.WiFi.SSID.
+     * @return ProvisioningTask
+     */
+    public function discoverMultiInstanceObject(CpeDevice $device, string $objectPath): ProvisioningTask
+    {
+        $objectPath = rtrim($objectPath, '.') . '.';
+        
+        // Trigger GetParameterNames per questo oggetto
+        return $this->discoverParameters($device, $objectPath, false);
+    }
+
+    /**
+     * Sincronizza instance data da capabilities a device_parameters
+     * Sync instance data from capabilities to device_parameters
+     * 
+     * @param CpeDevice $device
+     * @param array|null $objectPaths Paths specifici (null = tutti)
+     * @return array Risultati sync
+     */
+    public function syncMultiInstanceParameters(CpeDevice $device, ?array $objectPaths = null): array
+    {
+        $objectsToSync = $objectPaths ?? self::MULTI_INSTANCE_OBJECTS;
+        $results = [
+            'synced_count' => 0,
+            'skipped_count' => 0,
+            'objects' => [],
+        ];
+
+        DB::beginTransaction();
+        
+        try {
+            foreach ($objectsToSync as $objectPath) {
+                $objectPath = rtrim($objectPath, '.') . '.';
+                
+                // Get capabilities per questo oggetto
+                $capabilities = $device->deviceCapabilities()
+                    ->where('parameter_path', 'LIKE', $objectPath . '%')
+                    ->get();
+
+                $objectSyncCount = 0;
+                
+                foreach ($capabilities as $cap) {
+                    // Sync to device_parameters se non già presente
+                    $existing = $device->deviceParameters()
+                        ->where('parameter_path', $cap->parameter_path)
+                        ->first();
+
+                    if (!$existing) {
+                        $device->deviceParameters()->create([
+                            'parameter_path' => $cap->parameter_path,
+                            'parameter_value' => null, // Will be populated by next GetParameterValues
+                            'parameter_type' => $cap->data_type,
+                            'is_writable' => $cap->is_writable,
+                            'last_updated' => now(),
+                        ]);
+                        $objectSyncCount++;
+                        $results['synced_count']++;
+                    } else {
+                        $results['skipped_count']++;
+                    }
+                }
+
+                if ($objectSyncCount > 0) {
+                    $results['objects'][$objectPath] = [
+                        'synced' => $objectSyncCount,
+                    ];
+                }
+            }
+
+            DB::commit();
+
+            Log::info('Multi-instance parameters synced', [
+                'device_id' => $device->id,
+                'synced' => $results['synced_count'],
+                'skipped' => $results['skipped_count'],
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('Failed to sync multi-instance parameters', [
+                'device_id' => $device->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+
+        return $results;
+    }
+
+    /**
+     * Verifica se un path è un oggetto multi-instance
+     * Check if a path is a multi-instance object
+     * 
+     * @param string $path
+     * @return bool
+     */
+    public function isMultiInstanceObject(string $path): bool
+    {
+        $path = rtrim($path, '.') . '.';
+        
+        foreach (self::MULTI_INSTANCE_OBJECTS as $multiInstancePath) {
+            if (str_starts_with($path, $multiInstancePath)) {
+                return true;
+            }
+        }
+        
+        // Controlla anche pattern con numeri (es. Device.WiFi.SSID.1.)
+        if (preg_match('/\.\d+\./', $path)) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Ottiene lista multi-instance objects disponibili
+     * Get list of available multi-instance objects
+     * 
+     * @return array
+     */
+    public function getMultiInstanceObjectPaths(): array
+    {
+        return self::MULTI_INSTANCE_OBJECTS;
+    }
 }

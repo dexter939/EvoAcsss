@@ -167,12 +167,16 @@ Testa USP over HTTP/MQTT/WebSocket con Protocol Buffers encoding.
 # or directly: k6 run tests/Load/scenarios/tr369.js
 ```
 
-**Functional Validation Mode** (validazione completa):
+**Functional Validation Mode** (validazione completa - PRODUCTION READY):
 ```bash
-# Step 1: Uncomment functional thresholds in tr369.js (see thresholds section)
-# Step 2: Run test
-./tests/Load/run-tests.sh tr369
+# Use production-ready script with strict functional thresholds
+k6 run tests/Load/scenarios/tr369-functional.js
+
+# For mixed protocol with functional validation
+k6 run tests/Load/scenarios/mixed-functional.js
 ```
+
+**Note**: Functional validation scripts require ALL endpoints to return 200 responses. They will fail if endpoints are not fully implemented.
 
 **Transports Tested**:
 - **HTTP POST** (40%) - Bulk operations, stateless requests

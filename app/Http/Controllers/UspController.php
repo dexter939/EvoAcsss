@@ -487,6 +487,7 @@ class UspController extends Controller
     /**
      * Handle GET_INSTANCES request
      * Returns list of object instances for requested object paths
+     * Queries actual device parameter database for multi-instance objects
      */
     protected function handleGetInstances($msg, CpeDevice $device)
     {
@@ -502,22 +503,58 @@ class UspController extends Controller
         ]);
         
         $instanceResults = [];
+        
         foreach ($objPaths as $path) {
-            // For demo purposes, return mock instance data
-            // In production, query actual device instance database
-            if (str_contains($path, 'Device.WiFi.SSID.')) {
-                $instanceResults[$path] = [
-                    'Device.WiFi.SSID.1.' => ['SSID' => 'Home-WiFi', 'Enable' => 'true'],
-                    'Device.WiFi.SSID.2.' => ['SSID' => 'Guest-WiFi', 'Enable' => 'false']
-                ];
-            } elseif (str_contains($path, 'Device.Ethernet.Interface.')) {
-                $instanceResults[$path] = [
-                    'Device.Ethernet.Interface.1.' => ['Name' => 'eth0', 'Enable' => 'true']
-                ];
-            } else {
+            // Query device parameters for multi-instance objects
+            // Example: Device.WiFi.SSID. -> Device.WiFi.SSID.1., Device.WiFi.SSID.2., etc.
+            
+            // Normalize path to ensure trailing dot
+            $searchPath = rtrim($path, '.') . '.';
+            
+            // Query all parameters under this path that are instances
+            // Pattern: Device.WiFi.SSID.{instance_number}.{parameter}
+            $parameters = $device->deviceParameters()
+                ->where('parameter_path', 'LIKE', $searchPath . '%')
+                ->get();
+            
+            if ($parameters->isEmpty()) {
                 $instanceResults[$path] = [];
+                continue;
             }
+            
+            // Group by instance number
+            $instances = [];
+            foreach ($parameters as $param) {
+                // Extract instance path from parameter path
+                // Device.WiFi.SSID.1.SSID -> Device.WiFi.SSID.1.
+                $relativePath = substr($param->parameter_path, strlen($searchPath));
+                
+                // Get instance number (first segment after search path)
+                if (preg_match('/^(\d+)\.(.+)/', $relativePath, $matches)) {
+                    $instanceNum = $matches[1];
+                    $paramName = $matches[2];
+                    $instancePath = $searchPath . $instanceNum . '.';
+                    
+                    // Skip if first_level_only and this is a nested instance
+                    if ($firstLevelOnly && substr_count($paramName, '.') > 0) {
+                        continue;
+                    }
+                    
+                    if (!isset($instances[$instancePath])) {
+                        $instances[$instancePath] = [];
+                    }
+                    
+                    $instances[$instancePath][$paramName] = $param->parameter_value;
+                }
+            }
+            
+            $instanceResults[$path] = $instances;
         }
+        
+        Log::info('GET_INSTANCES response prepared', [
+            'device_id' => $device->id,
+            'instance_count' => array_sum(array_map('count', $instanceResults))
+        ]);
         
         return $this->uspService->createGetInstancesResponseMessage($msgId, $instanceResults);
     }
@@ -525,6 +562,7 @@ class UspController extends Controller
     /**
      * Handle GET_SUPPORTED_DM request
      * Returns data model metadata for requested object paths
+     * Queries TR069Parameter database for actual data model definitions
      */
     protected function handleGetSupportedDm($msg, CpeDevice $device)
     {
@@ -546,32 +584,93 @@ class UspController extends Controller
         ]);
         
         $supportedObjects = [];
+        
         foreach ($objPaths as $path) {
-            // For demo purposes, return mock data model metadata
-            // In production, query actual TR-181 data model database
-            if (str_starts_with($path, 'Device.DeviceInfo.')) {
-                $supportedObjects[$path] = [
-                    'objects' => [
-                        'Device.DeviceInfo.' => [
-                            'access' => 1, // Read-only
-                            'is_multi_instance' => false
-                        ]
-                    ],
-                    'params' => [
-                        'Manufacturer' => ['access' => 1, 'value_type' => 1], // Read-only, String
-                        'ModelName' => ['access' => 1, 'value_type' => 1],
-                        'SoftwareVersion' => ['access' => 1, 'value_type' => 1]
-                    ]
-                ];
-            } else {
+            // Normalize path
+            $searchPath = rtrim($path, '.') . '.';
+            
+            // Query TR069Parameter database for this path and children
+            $query = \App\Models\TR069Parameter::where('parameter_path', 'LIKE', $searchPath . '%');
+            
+            if ($firstLevelOnly) {
+                // Only return direct children, not nested
+                $query->where('parameter_path', 'NOT LIKE', $searchPath . '%.%.%');
+            }
+            
+            $parameters = $query->get();
+            
+            if ($parameters->isEmpty()) {
                 $supportedObjects[$path] = [
                     'objects' => [],
                     'params' => []
                 ];
+                continue;
             }
+            
+            $objects = [];
+            $params = [];
+            
+            foreach ($parameters as $param) {
+                if ($param->is_object) {
+                    // This is an object definition
+                    $objects[$param->parameter_path] = [
+                        'access' => $this->mapAccessType($param->access_type),
+                        'is_multi_instance' => str_contains($param->parameter_path, '{i}'),
+                        'description' => $param->description,
+                    ];
+                } elseif ($returnParams) {
+                    // This is a parameter
+                    $paramName = basename($param->parameter_path);
+                    $params[$paramName] = [
+                        'access' => $this->mapAccessType($param->access_type),
+                        'value_type' => $this->mapParameterType($param->parameter_type),
+                        'description' => $param->description,
+                    ];
+                }
+            }
+            
+            $supportedObjects[$path] = [
+                'objects' => $objects,
+                'params' => $params,
+            ];
         }
         
+        Log::info('GET_SUPPORTED_DM response prepared', [
+            'device_id' => $device->id,
+            'object_count' => count($supportedObjects),
+            'total_params' => array_sum(array_map(fn($o) => count($o['params']), $supportedObjects))
+        ]);
+        
         return $this->uspService->createGetSupportedDmResponseMessage($msgId, $supportedObjects);
+    }
+    
+    /**
+     * Map TR-069 access type to numeric value
+     */
+    protected function mapAccessType(string $accessType): int
+    {
+        return match(strtolower($accessType)) {
+            'read-only', 'readonly' => 1,
+            'read-write', 'readwrite' => 2,
+            'write-only', 'writeonly' => 3,
+            default => 1,
+        };
+    }
+    
+    /**
+     * Map TR-069 parameter type to numeric value
+     */
+    protected function mapParameterType(string $paramType): int
+    {
+        return match(strtolower($paramType)) {
+            'string' => 1,
+            'int', 'integer' => 2,
+            'unsigned int', 'unsignedint' => 3,
+            'boolean', 'bool' => 4,
+            'datetime' => 5,
+            'base64' => 6,
+            default => 1,
+        };
     }
 
     /**
