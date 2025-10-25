@@ -265,12 +265,11 @@ jobs:
           sudo chmod +x /usr/local/bin/k6
           k6 version
 
-      - name: Run K6 Functional Validation
+      - name: Run K6 CI Validation
         run: |
-          k6 run tests/Load/scenarios/tr369-functional.js \
+          k6 run tests/Load/scenarios/tr369-ci.js \
             --out json=k6-results.json \
             --summary-export=k6-summary.json
-        continue-on-error: true
 
       - name: Upload K6 results
         if: always()

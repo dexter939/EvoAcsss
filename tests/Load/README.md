@@ -18,10 +18,12 @@ Questa directory contiene l'infrastruttura di load testing per il sistema ACS ca
 ```
 tests/Load/
 ├── scenarios/          # Test scenarios per diversi livelli di carico
-│   ├── api-rest.js    # REST API load testing
-│   ├── tr069.js       # TR-069 protocol testing
-│   ├── tr369.js       # TR-369 USP protocol testing
-│   └── mixed.js       # Mixed protocol scenarios
+│   ├── api-rest.js         # REST API load testing
+│   ├── tr069.js            # TR-069 protocol testing (infrastructure)
+│   ├── tr369.js            # TR-369 USP protocol testing (infrastructure)
+│   ├── tr369-functional.js # TR-369 USP functional validation (local)
+│   ├── tr369-ci.js         # TR-369 USP CI/CD validation (lightweight)
+│   └── mixed.js            # Mixed protocol scenarios
 ├── utils/             # Utility functions e helpers
 │   ├── config.js      # Configuration management
 │   ├── metrics.js     # Custom metrics
