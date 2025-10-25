@@ -6,21 +6,28 @@ Built with **React Native** and **Expo** for iOS and Android platforms.
 
 ---
 
-## 📱 Features
+## 📱 Features Status
 
-### ✅ Phase 1 - Core (Implemented)
-- **Authentication**: Token-based login/logout
-- **Dashboard**: Real-time device and alarm statistics
-- **Device Management**: List, search, and filter devices
-- **Profile**: User info and logout
+### ✅ Phase 1 - MVP Core (COMPLETED)
+- ✅ **Project Setup**: Complete React Native/Expo structure
+- ✅ **Authentication**: Token-based login/logout with AsyncStorage
+- ✅ **API Services**: Device, Alarm, Diagnostic services ready
+- ✅ **Dashboard**: Device and alarm statistics cards
+- ✅ **Device List**: Search, filter, and basic device info
+- ✅ **Profile Screen**: User info and logout
+- ✅ **Navigation**: Stack + Bottom Tabs navigation
+- ✅ **Secure Config**: Environment-based API URL/Key management
 
-### 🚧 Phase 2 - Advanced (Coming Soon)
-- **Alarms Management**: Real-time alarm monitoring and acknowledgment
-- **TR-143 Diagnostics**: Ping, Traceroute, Download, Upload tests
-- **QR Code Scanner**: Device registration via QR codes
-- **Push Notifications**: Real-time alarm notifications
-- **Offline Mode**: Work without internet connection
-- **Geolocation Map**: Device locations on map
+### 🚧 Phase 2 - Advanced Features (NOT YET IMPLEMENTED)
+These screens exist as **placeholders only**:
+- ⚠️ **Alarms Screen**: List view only, no real-time polling/streaming
+- ⚠️ **Diagnostics Screen**: Stub only, no TR-143 test execution
+- ⚠️ **QR Scanner**: Placeholder, requires expo-camera integration
+- ⚠️ **Push Notifications**: Config present, handler not implemented
+- ⚠️ **Device Details**: Basic stub, needs parameter view/edit
+- ⚠️ **Offline Mode**: Not implemented, all data is fetched online
+
+**Phase 2 requires additional development** to implement these features fully.
 
 ---
 
@@ -40,8 +47,12 @@ cd mobile-app
 # Install dependencies
 npm install
 
-# Start Expo development server
-npm start
+# IMPORTANT: Create .env file BEFORE starting
+cp .env.example .env
+# Edit .env and add your ACS_API_URL and ACS_API_KEY
+
+# Start Expo development server (clear cache to load .env)
+npm start -- --clear
 ```
 
 ### Running on Devices
@@ -67,30 +78,54 @@ npm run web
 
 ## 🔧 Configuration
 
-### API Backend
+### ⚠️ REQUIRED: Environment Setup
 
-Edit `src/constants/config.ts`:
+**The app will NOT work without proper configuration!**
 
-```typescript
-// Development
-const replitDomain = process.env.REPLIT_DOMAINS;
-return `https://${replitDomain}`; // Auto-detects Replit domain
+#### Step 1: Create .env file
 
-// Production
-return 'https://your-acs-domain.com';
+```bash
+cd mobile-app
+cp .env.example .env
 ```
 
-### Environment Variables
-
-Create `.env` file:
+#### Step 2: Configure .env
 
 ```env
-# Replit domain (auto-detected)
-REPLIT_DOMAINS=your-repl.replit.dev
+# Backend API URL (REQUIRED)
+# For Replit: Get from browser address bar when running backend
+# Example: https://your-repl-name.replit.dev
+ACS_API_URL=https://your-backend-url.com
 
-# API Key (matches Laravel backend)
+# Backend API Key (REQUIRED)
+# Get this from your ACS administrator or backend settings
 ACS_API_KEY=your-api-key-here
 ```
+
+#### Step 3: Verify app.config.js
+
+The `app.config.js` reads from `.env` automatically via `process.env`:
+
+```javascript
+extra: {
+  apiUrl: process.env.ACS_API_URL || '',
+  apiKey: process.env.ACS_API_KEY || '',
+}
+```
+
+#### Security Notes
+
+- ✅ **NEVER commit `.env` files** to git (already in .gitignore)
+- ✅ **Use different keys** for development/production
+- ✅ **Rotate API keys** regularly on backend
+- ⚠️ **API keys in mobile apps** can be extracted - consider additional auth layers for production
+
+#### Getting Your Backend URL
+
+1. Start Laravel backend: `php artisan serve --host=0.0.0.0 --port=5000`
+2. On Replit: Copy the webview URL (e.g., `https://abc123.replit.dev`)
+3. For production: Use your deployed domain
+4. Set in `.env` file as `ACS_API_URL`
 
 ---
 
@@ -292,17 +327,33 @@ npm run android
 
 ## 🐛 Troubleshooting
 
-### "Unable to connect to backend"
-- Check `config.ts` API_URL matches backend URL
-- Verify backend is running on port 5000
-- For Android emulator, use `10.0.2.2` instead of `localhost`
-- For iOS simulator, `localhost` works
+### ⚠️ "API_URL not configured" warning
+**Cause**: Missing or empty `.env` file
+**Fix**: 
+1. Copy `.env.example` to `.env`
+2. Set `ACS_API_URL=https://your-backend-url`
+3. Restart Expo server (`npm start`)
 
-### "Login failed"
-- Verify backend API key in headers
-- Check backend `/api/auth/login` endpoint exists
-- Ensure CORS is configured on backend
-- Check network console logs
+### "Unable to connect to backend"
+**Causes & Fixes**:
+- ❌ `.env` file missing → Create it with proper values
+- ❌ Backend not running → Start Laravel: `php artisan serve --host=0.0.0.0 --port=5000`
+- ❌ Wrong URL in `.env` → Verify URL matches backend address
+- ❌ CORS not configured → Add mobile app domain to Laravel CORS config
+
+### "Login failed" or "401 Unauthorized"
+**Causes & Fixes**:
+- ❌ Wrong API key → Verify `ACS_API_KEY` in `.env` matches backend
+- ❌ API key not set → Check `.env` file exists and has `ACS_API_KEY`
+- ❌ Invalid credentials → Verify email/password are correct
+- ❌ Backend auth endpoint broken → Check `/api/auth/login` works via Postman
+
+### "Network request failed" on physical device
+**Causes & Fixes**:
+- ❌ Using `localhost` or `10.0.2.2` → These only work on emulators!
+- ✅ Use **public URL** in `.env` (Replit domain or ngrok)
+- ✅ Ensure device and backend are on same network (local dev)
+- ✅ For Replit: Always use the public HTTPS domain
 
 ### "Dependencies not installing"
 - Delete `node_modules/` and `package-lock.json`

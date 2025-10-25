@@ -11,9 +11,11 @@ yarn-error.log
 # macOS
 .DS_Store
 
-# Environment
+# Environment (NEVER commit these!)
 .env
 .env.local
+.env.production
+.env.development
 
 # IDE
 .vscode/

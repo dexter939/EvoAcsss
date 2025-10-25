@@ -36,8 +36,12 @@ class ApiService {
           config.headers.Authorization = `Bearer ${this.authToken}`;
         }
 
-        // Add API key for Laravel routes
-        config.headers['X-API-Key'] = process.env.ACS_API_KEY || 'acs-secret-key-change-in-production';
+        // Add API key for Laravel routes (from secure config)
+        if (Config.API_KEY) {
+          config.headers['X-API-Key'] = Config.API_KEY;
+        } else if (__DEV__) {
+          console.warn('⚠️  API Key not configured - requests may fail');
+        }
 
         return config;
       },
