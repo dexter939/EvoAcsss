@@ -9,14 +9,14 @@ I prefer clear and concise explanations. When making changes, prioritize core fu
 ## UI/UX Decisions
 The web interface utilizes the Soft UI Dashboard Laravel template for a modern, responsive design. Key UI elements include a redesigned dashboard, enhanced CPE device configuration editors, a real-time alarms system, card-based device listings, a tabbed device details modal, an AI-Powered Configuration Assistant Dashboard, a Network Topology Map, an Advanced Provisioning Dashboard, a Performance Monitoring Dashboard, and an Advanced Monitoring & Alerting System.
 
-**Mobile Application**: Native React Native/Expo mobile app (v1.0.0) for field technicians and administrators with iOS/Android support, featuring token-based authentication, device management, real-time statistics dashboard, alarm monitoring, and TR-143 diagnostics. Built with carrier-grade security (environment-based API configuration, no hardcoded secrets).
+**Mobile Application**: Native React Native/Expo mobile app (v2.0.0 - Phase 2) for field technicians and administrators with iOS/Android support. Phase 1 features: token-based authentication, device management, real-time statistics dashboard. **Phase 2 features (NEW)**: Real-time alarm monitoring with 30s auto-refresh, alarm acknowledge/clear flows, TR-143 diagnostics execution (ping/traceroute), device details screen with comprehensive metadata, QR scanner setup guide (expo-camera), push notifications documentation. Built with carrier-grade security (environment-based API configuration, no hardcoded secrets).
 
 ## Technical Implementations
 - **Protocol Support**: Comprehensive implementation of 10 production-ready TR protocols (TR-069, TR-104, TR-106, TR-111, TR-135, TR-140, TR-157, TR-181, TR-262, TR-369) with BBF-compliant services, including real STOMP client for TR-262 and complete TR-369 USP transport layer implementations (HTTP, MQTT, WebSocket).
 - **Database**: PostgreSQL with optimized indexing and multi-tenancy.
 - **Performance Optimizations**: Strategic database indexes, multi-tier Redis caching, and a centralized CacheService.
 - **Asynchronous Processing**: Laravel Horizon with Redis queues for provisioning, firmware, and TR-069 requests.
-- **API Security**: Dual authentication system for v1 RESTful endpoints - Laravel Sanctum token-based authentication for mobile apps, API Key authentication for server-to-server calls, rate limiting, and DDoS protection.
+- **API Security**: Dual authentication system for v1 RESTful endpoints - Laravel Sanctum token-based authentication for mobile apps (with AlarmController endpoints), API Key authentication for server-to-server calls, rate limiting, and DDoS protection.
 - **Security Hardening**: Enterprise-grade security features including RBAC, input validation, security audit logging, IP blacklist management, and a comprehensive Audit Log System.
 - **Multi-Tenant Device Access Control**: Role-based device scoping via `user_devices` pivot table with three permission levels, enforced by `EnsureDeviceAccess` middleware.
 - **Scalability**: Achieved through database optimizations, Redis caching, and a high-throughput queue system.
@@ -26,7 +26,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Test Infrastructure**: Comprehensive test suite with 5 Fake Services to isolate external dependencies and ensure deterministic test execution. Includes a regression test suite for JavaScript integrity.
 - **JavaScript Quality Assurance**: Custom ESLint-based linting system for Blade templates, validating JavaScript for duplicate declarations.
 - **Audit Log System**: Comprehensive compliance and security tracking system for all CRUD operations and business-critical actions, supporting various compliance standards.
-- **Mobile Application Architecture**: React Native/Expo app with TypeScript, environment-aware configuration (dotenv + expo-constants), API service layer (Axios) consuming Laravel REST endpoints, React Navigation (Stack + Bottom Tabs), AsyncStorage for offline token management, secure credential handling via .env files, and multi-source Constants support for dev/production builds. Backend provides mobile authentication endpoints (/api/auth/login, /api/auth/logout) with Laravel Sanctum token generation.
+- **Mobile Application Architecture**: React Native/Expo app with TypeScript, environment-aware configuration (dotenv + expo-constants), API service layer (Axios) consuming Laravel REST endpoints, React Navigation (Stack + Bottom Tabs), AsyncStorage for offline token management, secure credential handling via .env files, and multi-source Constants support for dev/production builds. Backend provides mobile endpoints: /api/auth/login, /api/auth/logout (Sanctum tokens), /api/v1/alarms/* (CRUD, stats, acknowledge, clear), /api/v1/diagnostics/* (TR-143 test execution), /api/v1/devices/* (device management). Phase 2 screens: AlarmsScreen (30s auto-refresh), DiagnosticsScreen (ping/traceroute execution), DeviceDetailsScreen, QRScannerScreen (documented placeholder), Push Notifications setup guide.
 
 ## Feature Specifications
 - **Device Management**: Auto-registration, zero-touch provisioning with configuration profiles, firmware management, and a multi-vendor device library.
@@ -43,7 +43,10 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Multi-Vendor Device Library**: Comprehensive vendor management system with dedicated UI views, firmware compatibility matrix, and OUI-based auto-detection.
 - **Bulk Operations API**: RESTful endpoints for bulk vendor detection, template application, and firmware compatibility checking.
 - **Compliance & Audit Logging**: Carrier-grade audit trail system for regulatory compliance (SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS).
-- **Mobile App Features (Phase 1 MVP)**: Authentication with token persistence, dashboard with device/alarm statistics, device list with search/filter, profile management. Phase 2 (planned): Real-time alarm streaming, TR-143 diagnostic execution, QR code device registration, push notifications, offline sync.
+- **Mobile App Features**:
+  - **Phase 1 MVP**: Authentication with token persistence, dashboard with device/alarm statistics, device list with search/filter, profile management.
+  - **Phase 2 (COMPLETED)**: Real-time alarm monitoring (30s polling), alarm acknowledge/clear flows, TR-143 diagnostic execution (ping/traceroute), device details screen, QR scanner setup guide (expo-camera integration), push notifications setup documentation.
+  - **Phase 3 (Planned)**: WebSocket real-time alarm streaming, offline sync, advanced filtering, bulk operations.
 
 # External Dependencies
 - **PostgreSQL 16+**: Primary relational database.
