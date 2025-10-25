@@ -19,6 +19,12 @@ use Usp\Operate;
 use Usp\OperateResp;
 use Usp\Notify;
 use Usp\NotifyResp;
+use Usp\GetInstances;
+use Usp\GetInstancesResp;
+use Usp\GetSupportedDM;
+use Usp\GetSupportedDMResp;
+use Usp\GetSupportedProtocol;
+use Usp\GetSupportedProtocolResp;
 use Usp_record\Record;
 use Usp_record\NoSessionContextRecord;
 
@@ -442,6 +448,12 @@ class UspMessageService
             Header\MsgType::OPERATE_RESP => 'OPERATE_RESP',
             Header\MsgType::NOTIFY => 'NOTIFY',
             Header\MsgType::NOTIFY_RESP => 'NOTIFY_RESP',
+            Header\MsgType::GET_INSTANCES => 'GET_INSTANCES',
+            Header\MsgType::GET_INSTANCES_RESP => 'GET_INSTANCES_RESP',
+            Header\MsgType::GET_SUPPORTED_DM => 'GET_SUPPORTED_DM',
+            Header\MsgType::GET_SUPPORTED_DM_RESP => 'GET_SUPPORTED_DM_RESP',
+            Header\MsgType::GET_SUPPORTED_PROTOCOL => 'GET_SUPPORTED_PROTOCOL',
+            Header\MsgType::GET_SUPPORTED_PROTOCOL_RESP => 'GET_SUPPORTED_PROTOCOL_RESP',
             Header\MsgType::ERROR => 'ERROR',
             default => 'UNKNOWN'
         };
@@ -741,6 +753,159 @@ class UspMessageService
 
         $body = new Body();
         $body->setError($error);
+
+        $msg = new Msg();
+        $msg->setHeader($header);
+        $msg->setBody($body);
+
+        return $msg;
+    }
+
+    /**
+     * Create USP GetInstances Response message
+     * 
+     * @param string $msgId Message ID
+     * @param array $instanceResults Array of instance results per requested path
+     * @return Msg
+     */
+    public function createGetInstancesResponseMessage(string $msgId, array $instanceResults): Msg
+    {
+        $header = new Header();
+        $header->setMsgId($msgId);
+        $header->setMsgType(Header\MsgType::GET_INSTANCES_RESP);
+
+        $getInstancesResp = new GetInstancesResp();
+        
+        $pathResults = [];
+        foreach ($instanceResults as $path => $instances) {
+            $pathResult = new GetInstancesResp\RequestedPathResult();
+            $pathResult->setRequestedPath($path);
+            $pathResult->setErrCode(0); // Success
+            
+            $currInstances = [];
+            foreach ($instances as $instancePath => $uniqueKeys) {
+                $currInstance = new GetInstancesResp\CurrInstance();
+                $currInstance->setInstantiatedObjPath($instancePath);
+                
+                // Add unique keys if provided
+                if (is_array($uniqueKeys)) {
+                    $uniqueKeyMap = [];
+                    foreach ($uniqueKeys as $key => $value) {
+                        $uniqueKeyMap[$key] = (string)$value;
+                    }
+                    $currInstance->setUniqueKeys($uniqueKeyMap);
+                }
+                
+                $currInstances[] = $currInstance;
+            }
+            
+            $pathResult->setCurrInsts($currInstances);
+            $pathResults[] = $pathResult;
+        }
+        
+        $getInstancesResp->setReqPathResults($pathResults);
+
+        $response = new Response();
+        $response->setGetInstancesResp($getInstancesResp);
+
+        $body = new Body();
+        $body->setResponse($response);
+
+        $msg = new Msg();
+        $msg->setHeader($header);
+        $msg->setBody($body);
+
+        return $msg;
+    }
+
+    /**
+     * Create USP GetSupportedDM Response message
+     * 
+     * @param string $msgId Message ID
+     * @param array $supportedObjects Array of supported objects with metadata
+     * @return Msg
+     */
+    public function createGetSupportedDmResponseMessage(string $msgId, array $supportedObjects): Msg
+    {
+        $header = new Header();
+        $header->setMsgId($msgId);
+        $header->setMsgType(Header\MsgType::GET_SUPPORTED_DM_RESP);
+
+        $getSupportedDmResp = new GetSupportedDMResp();
+        
+        $objResults = [];
+        foreach ($supportedObjects as $path => $metadata) {
+            $objResult = new GetSupportedDMResp\RequestedObjectResult();
+            $objResult->setReqObjPath($path);
+            $objResult->setErrCode(0); // Success
+            
+            // Add supported objects
+            if (isset($metadata['objects'])) {
+                $supportedObjs = [];
+                foreach ($metadata['objects'] as $objPath => $objMetadata) {
+                    $supportedObj = new GetSupportedDMResp\SupportedObjectResult();
+                    $supportedObj->setSupportedObjPath($objPath);
+                    $supportedObj->setAccess($objMetadata['access'] ?? GetSupportedDMResp\ObjAccessType::OBJ_READ_ONLY);
+                    $supportedObj->setIsMultiInstance($objMetadata['is_multi_instance'] ?? false);
+                    
+                    $supportedObjs[] = $supportedObj;
+                }
+                $objResult->setSupportedObjs($supportedObjs);
+            }
+            
+            // Add supported parameters
+            if (isset($metadata['params'])) {
+                $supportedParams = [];
+                foreach ($metadata['params'] as $paramPath => $paramMetadata) {
+                    $supportedParam = new GetSupportedDMResp\SupportedParamResult();
+                    $supportedParam->setParamName($paramPath);
+                    $supportedParam->setAccess($paramMetadata['access'] ?? GetSupportedDMResp\ParamAccessType::PARAM_READ_ONLY);
+                    $supportedParam->setValueType($paramMetadata['value_type'] ?? GetSupportedDMResp\ParamValueType::PARAM_STRING);
+                    
+                    $supportedParams[] = $supportedParam;
+                }
+                $objResult->setSupportedParams($supportedParams);
+            }
+            
+            $objResults[] = $objResult;
+        }
+        
+        $getSupportedDmResp->setReqObjResults($objResults);
+
+        $response = new Response();
+        $response->setGetSupportedDMResp($getSupportedDmResp);
+
+        $body = new Body();
+        $body->setResponse($response);
+
+        $msg = new Msg();
+        $msg->setHeader($header);
+        $msg->setBody($body);
+
+        return $msg;
+    }
+
+    /**
+     * Create USP GetSupportedProtocol Response message
+     * 
+     * @param string $msgId Message ID
+     * @param string $protocolVersions Comma-separated protocol versions (e.g., "1.0,1.1,1.2,1.3")
+     * @return Msg
+     */
+    public function createGetSupportedProtocolResponseMessage(string $msgId, string $protocolVersions = '1.0,1.1,1.2,1.3'): Msg
+    {
+        $header = new Header();
+        $header->setMsgId($msgId);
+        $header->setMsgType(Header\MsgType::GET_SUPPORTED_PROTOCOL_RESP);
+
+        $getSupportedProtocolResp = new GetSupportedProtocolResp();
+        $getSupportedProtocolResp->setAgentSupportedProtocolVersions($protocolVersions);
+
+        $response = new Response();
+        $response->setGetSupportedProtocolResp($getSupportedProtocolResp);
+
+        $body = new Body();
+        $body->setResponse($response);
 
         $msg = new Msg();
         $msg->setHeader($header);

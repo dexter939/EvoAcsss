@@ -92,6 +92,9 @@ class UspController extends Controller
                 'DELETE' => $this->handleDelete($msg, $device),
                 'OPERATE' => $this->handleOperate($msg, $device),
                 'NOTIFY' => $this->handleNotify($msg, $device),
+                'GET_INSTANCES' => $this->handleGetInstances($msg, $device),
+                'GET_SUPPORTED_DM' => $this->handleGetSupportedDm($msg, $device),
+                'GET_SUPPORTED_PROTOCOL' => $this->handleGetSupportedProtocol($msg, $device),
                 'GET_RESP', 'SET_RESP', 'ADD_RESP', 'DELETE_RESP', 'OPERATE_RESP' => 
                     $this->handleResponse($msg, $device),
                 default => $this->createErrorMessage($msgId, 9000, "Unsupported message type: {$msgType}")
@@ -482,6 +485,118 @@ class UspController extends Controller
     }
 
     /**
+     * Handle GET_INSTANCES request
+     * Returns list of object instances for requested object paths
+     */
+    protected function handleGetInstances($msg, CpeDevice $device)
+    {
+        $msgId = $msg->getHeader()->getMsgId();
+        $getInstances = $msg->getBody()->getRequest()->getGetInstances();
+        $objPaths = iterator_to_array($getInstances->getObjPaths());
+        $firstLevelOnly = $getInstances->getFirstLevelOnly();
+        
+        Log::info('Processing GET_INSTANCES request', [
+            'device_id' => $device->id,
+            'paths' => $objPaths,
+            'first_level_only' => $firstLevelOnly
+        ]);
+        
+        $instanceResults = [];
+        foreach ($objPaths as $path) {
+            // For demo purposes, return mock instance data
+            // In production, query actual device instance database
+            if (str_contains($path, 'Device.WiFi.SSID.')) {
+                $instanceResults[$path] = [
+                    'Device.WiFi.SSID.1.' => ['SSID' => 'Home-WiFi', 'Enable' => 'true'],
+                    'Device.WiFi.SSID.2.' => ['SSID' => 'Guest-WiFi', 'Enable' => 'false']
+                ];
+            } elseif (str_contains($path, 'Device.Ethernet.Interface.')) {
+                $instanceResults[$path] = [
+                    'Device.Ethernet.Interface.1.' => ['Name' => 'eth0', 'Enable' => 'true']
+                ];
+            } else {
+                $instanceResults[$path] = [];
+            }
+        }
+        
+        return $this->uspService->createGetInstancesResponseMessage($msgId, $instanceResults);
+    }
+
+    /**
+     * Handle GET_SUPPORTED_DM request
+     * Returns data model metadata for requested object paths
+     */
+    protected function handleGetSupportedDm($msg, CpeDevice $device)
+    {
+        $msgId = $msg->getHeader()->getMsgId();
+        $getSupportedDm = $msg->getBody()->getRequest()->getGetSupportedDM();
+        $objPaths = iterator_to_array($getSupportedDm->getObjPaths());
+        $firstLevelOnly = $getSupportedDm->getFirstLevelOnly();
+        $returnCommands = $getSupportedDm->getReturnCommands();
+        $returnEvents = $getSupportedDm->getReturnEvents();
+        $returnParams = $getSupportedDm->getReturnParams();
+        
+        Log::info('Processing GET_SUPPORTED_DM request', [
+            'device_id' => $device->id,
+            'paths' => $objPaths,
+            'first_level_only' => $firstLevelOnly,
+            'return_commands' => $returnCommands,
+            'return_events' => $returnEvents,
+            'return_params' => $returnParams
+        ]);
+        
+        $supportedObjects = [];
+        foreach ($objPaths as $path) {
+            // For demo purposes, return mock data model metadata
+            // In production, query actual TR-181 data model database
+            if (str_starts_with($path, 'Device.DeviceInfo.')) {
+                $supportedObjects[$path] = [
+                    'objects' => [
+                        'Device.DeviceInfo.' => [
+                            'access' => 1, // Read-only
+                            'is_multi_instance' => false
+                        ]
+                    ],
+                    'params' => [
+                        'Manufacturer' => ['access' => 1, 'value_type' => 1], // Read-only, String
+                        'ModelName' => ['access' => 1, 'value_type' => 1],
+                        'SoftwareVersion' => ['access' => 1, 'value_type' => 1]
+                    ]
+                ];
+            } else {
+                $supportedObjects[$path] = [
+                    'objects' => [],
+                    'params' => []
+                ];
+            }
+        }
+        
+        return $this->uspService->createGetSupportedDmResponseMessage($msgId, $supportedObjects);
+    }
+
+    /**
+     * Handle GET_SUPPORTED_PROTOCOL request
+     * Returns supported USP protocol versions
+     */
+    protected function handleGetSupportedProtocol($msg, CpeDevice $device)
+    {
+        $msgId = $msg->getHeader()->getMsgId();
+        $getSupportedProtocol = $msg->getBody()->getRequest()->getGetSupportedProtocol();
+        $controllerVersions = $getSupportedProtocol->getControllerSupportedProtocolVersions();
+        
+        Log::info('Processing GET_SUPPORTED_PROTOCOL request', [
+            'device_id' => $device->id,
+            'controller_versions' => $controllerVersions
+        ]);
+        
+        // Return supported USP protocol versions (TR-369)
+        // ACS supports versions 1.0, 1.1, 1.2, 1.3
+        $agentVersions = '1.0,1.1,1.2,1.3';
+        
+        return $this->uspService->createGetSupportedProtocolResponseMessage($msgId, $agentVersions);
+    }
+
+    /**
      * Gestisce polling HTTP per dispositivi HTTP MTP
      * Handles HTTP polling for HTTP MTP devices
      * 
@@ -587,6 +702,9 @@ class UspController extends Controller
                 'DELETE' => $this->handleDelete($msg, $device),
                 'OPERATE' => $this->handleOperate($msg, $device),
                 'NOTIFY' => $this->handleNotify($msg, $device),
+                'GET_INSTANCES' => $this->handleGetInstances($msg, $device),
+                'GET_SUPPORTED_DM' => $this->handleGetSupportedDm($msg, $device),
+                'GET_SUPPORTED_PROTOCOL' => $this->handleGetSupportedProtocol($msg, $device),
                 'GET_RESP', 'SET_RESP', 'ADD_RESP', 'DELETE_RESP', 'OPERATE_RESP' => 
                     $this->handleResponse($msg, $device),
                 default => $this->createErrorMessage($msgId, 9000, "Unsupported message type: {$msgType}")
