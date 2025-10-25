@@ -9,6 +9,8 @@ I prefer clear and concise explanations. When making changes, prioritize core fu
 ## UI/UX Decisions
 The web interface utilizes the Soft UI Dashboard Laravel template for a modern, responsive design. Key UI elements include a redesigned dashboard, enhanced CPE device configuration editors, a real-time alarms system, card-based device listings, a tabbed device details modal, an AI-Powered Configuration Assistant Dashboard, a Network Topology Map, an Advanced Provisioning Dashboard, a Performance Monitoring Dashboard, and an Advanced Monitoring & Alerting System.
 
+**Mobile Application**: Native React Native/Expo mobile app (v1.0.0) for field technicians and administrators with iOS/Android support, featuring token-based authentication, device management, real-time statistics dashboard, alarm monitoring, and TR-143 diagnostics. Built with carrier-grade security (environment-based API configuration, no hardcoded secrets).
+
 ## Technical Implementations
 - **Protocol Support**: Comprehensive implementation of 10 production-ready TR protocols (TR-069, TR-104, TR-106, TR-111, TR-135, TR-140, TR-157, TR-181, TR-262, TR-369) with BBF-compliant services, including real STOMP client for TR-262 and complete TR-369 USP transport layer implementations (HTTP, MQTT, WebSocket).
 - **Database**: PostgreSQL with optimized indexing and multi-tenancy.
@@ -24,6 +26,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Test Infrastructure**: Comprehensive test suite with 5 Fake Services to isolate external dependencies and ensure deterministic test execution. Includes a regression test suite for JavaScript integrity.
 - **JavaScript Quality Assurance**: Custom ESLint-based linting system for Blade templates, validating JavaScript for duplicate declarations.
 - **Audit Log System**: Comprehensive compliance and security tracking system for all CRUD operations and business-critical actions, supporting various compliance standards.
+- **Mobile Application Architecture**: React Native/Expo app with TypeScript, environment-aware configuration (dotenv + expo-constants), API service layer (Axios) consuming Laravel REST endpoints, React Navigation (Stack + Bottom Tabs), AsyncStorage for offline token management, secure credential handling via .env files, and multi-source Constants support for dev/production builds.
 
 ## Feature Specifications
 - **Device Management**: Auto-registration, zero-touch provisioning with configuration profiles, firmware management, and a multi-vendor device library.
@@ -40,6 +43,7 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Multi-Vendor Device Library**: Comprehensive vendor management system with dedicated UI views, firmware compatibility matrix, and OUI-based auto-detection.
 - **Bulk Operations API**: RESTful endpoints for bulk vendor detection, template application, and firmware compatibility checking.
 - **Compliance & Audit Logging**: Carrier-grade audit trail system for regulatory compliance (SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS).
+- **Mobile App Features (Phase 1 MVP)**: Authentication with token persistence, dashboard with device/alarm statistics, device list with search/filter, profile management. Phase 2 (planned): Real-time alarm streaming, TR-143 diagnostic execution, QR code device registration, push notifications, offline sync.
 
 # External Dependencies
 - **PostgreSQL 16+**: Primary relational database.
@@ -61,3 +65,8 @@ The web interface utilizes the Soft UI Dashboard Laravel template for a modern, 
 - **Prometheus**: Time-series metrics database.
 - **Grafana**: Visualization and dashboarding platform.
 - **AlertManager**: Alert routing and notification system.
+- **React Native 0.74.5**: Mobile application framework.
+- **Expo SDK ~51.0.0**: Native features (camera, location, notifications).
+- **React Navigation 6.x**: Mobile app navigation.
+- **Expo Constants 16.0.2**: Environment variable management for mobile.
+- **dotenv 16.4.5**: Environment configuration for mobile builds.
