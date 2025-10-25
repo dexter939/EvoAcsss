@@ -1,0 +1,43 @@
+{
+  "name": "acs-mobile-app",
+  "version": "1.0.0",
+  "description": "ACS Mobile App - Carrier-grade device management for field technicians",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build:android": "eas build --platform android",
+    "build:ios": "eas build --platform ios"
+  },
+  "dependencies": {
+    "expo": "~51.0.0",
+    "expo-status-bar": "~1.12.1",
+    "react": "18.2.0",
+    "react-native": "0.74.5",
+    "react-native-safe-area-context": "4.10.5",
+    "react-native-screens": "3.31.1",
+    "@react-navigation/native": "^6.1.18",
+    "@react-navigation/native-stack": "^6.11.0",
+    "@react-navigation/bottom-tabs": "^6.6.1",
+    "axios": "^1.7.7",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "expo-camera": "~15.0.16",
+    "expo-barcode-scanner": "~13.0.1",
+    "expo-location": "~17.0.1",
+    "expo-notifications": "~0.28.18",
+    "react-native-chart-kit": "^6.12.0",
+    "react-native-svg": "15.2.0",
+    "@expo/vector-icons": "^14.0.3",
+    "expo-constants": "~16.0.2",
+    "expo-device": "~6.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "~18.2.79",
+    "@types/react-native": "^0.73.0",
+    "typescript": "~5.3.3"
+  },
+  "private": true
+}
