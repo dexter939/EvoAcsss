@@ -7,7 +7,16 @@ I prefer clear and concise explanations. When making changes, prioritize core fu
 # System Architecture
 
 ## UI/UX Decisions
-The web interface utilizes the Soft UI Dashboard Laravel template for a modern, responsive design. Key UI elements include a redesigned dashboard, enhanced CPE device configuration editors, a real-time alarms system, card-based device listings, a tabbed device details modal, an AI-Powered Configuration Assistant Dashboard, a Network Topology Map, an Advanced Provisioning Dashboard, a Performance Monitoring Dashboard, and an Advanced Monitoring & Alerting System.
+The web interface utilizes the **Soft UI Dashboard Pro Laravel** template for a modern, responsive design with **comprehensive GUI optimizations** following Creative Tim best practices. Key UI elements include a redesigned dashboard, enhanced CPE device configuration editors, a real-time alarms system, card-based device listings, a tabbed device details modal, an AI-Powered Configuration Assistant Dashboard, a Network Topology Map, an Advanced Provisioning Dashboard, a Performance Monitoring Dashboard, and an Advanced Monitoring & Alerting System.
+
+**GUI Optimizations (NEW - October 2025)**:
+- Global CSS utilities (`soft-ui-enhancements.css`) with shadow-xl, gradients, animations
+- Enhanced cards with hover effects and soft shadows
+- Gradient buttons and badges throughout
+- Improved tables with hover states and responsive wrappers
+- Consistent icon shapes and spacing
+- Animation utilities (fade-in, slide-up, skeleton loading)
+- Complete optimization guide documented in `docs/GUI_OPTIMIZATION_GUIDE.md`
 
 **Mobile Application**: Native React Native/Expo mobile app (v2.0.0 - Phase 2) for field technicians and administrators with iOS/Android support. Phase 1 features: token-based authentication, device management, real-time statistics dashboard. **Phase 2 features (NEW)**: Real-time alarm monitoring with 30s auto-refresh, alarm acknowledge/clear flows, TR-143 diagnostics execution (ping/traceroute), device details screen with comprehensive metadata, QR scanner setup guide (expo-camera), push notifications documentation. Built with carrier-grade security (environment-based API configuration, no hardcoded secrets).
 
