@@ -58,13 +58,16 @@ class UserDeviceScope implements Scope
      */
     public function extend(Builder $builder)
     {
+        // CRITICAL: Capture scope instance for use in macros
+        $scope = $this;
+
         /**
          * Add macro to include all devices (bypass scope)
          * 
          * Usage: CpeDevice::withAllDevices()->get()
          */
-        $builder->macro('withAllDevices', function (Builder $builder) {
-            return $builder->withoutGlobalScope($this);
+        $builder->macro('withAllDevices', function (Builder $builder) use ($scope) {
+            return $builder->withoutGlobalScope($scope);
         });
 
         /**
@@ -72,8 +75,8 @@ class UserDeviceScope implements Scope
          * 
          * Usage: CpeDevice::forUser($user)->get()
          */
-        $builder->macro('forUser', function (Builder $builder, $user) {
-            return $builder->withoutGlobalScope($this)
+        $builder->macro('forUser', function (Builder $builder, $user) use ($scope) {
+            return $builder->withoutGlobalScope($scope)
                 ->whereHas('users', function ($query) use ($user) {
                     $userId = is_object($user) ? $user->id : $user;
                     $query->where('users.id', $userId);
@@ -85,8 +88,8 @@ class UserDeviceScope implements Scope
          * 
          * Usage: CpeDevice::forDepartment('engineering')->get()
          */
-        $builder->macro('forDepartment', function (Builder $builder, string $department) {
-            return $builder->withoutGlobalScope($this)
+        $builder->macro('forDepartment', function (Builder $builder, string $department) use ($scope) {
+            return $builder->withoutGlobalScope($scope)
                 ->whereHas('users', function ($query) use ($department) {
                     $query->where('user_devices.department', $department);
                 });
@@ -97,10 +100,10 @@ class UserDeviceScope implements Scope
          * 
          * Usage: CpeDevice::withMinRole('manager')->get()
          */
-        $builder->macro('withMinRole', function (Builder $builder, string $minRole) {
+        $builder->macro('withMinRole', function (Builder $builder, string $minRole) use ($scope) {
             $user = Auth::user();
             if (!$user || $user->isSuperAdmin()) {
-                return $builder->withoutGlobalScope($this);
+                return $builder->withoutGlobalScope($scope);
             }
 
             // Role hierarchy: admin > manager > viewer
@@ -112,7 +115,7 @@ class UserDeviceScope implements Scope
 
             $allowedRoles = $roleHierarchy[$minRole] ?? [];
 
-            return $builder->withoutGlobalScope($this)
+            return $builder->withoutGlobalScope($scope)
                 ->whereHas('users', function ($query) use ($user, $allowedRoles) {
                     $query->where('users.id', $user->id)
                         ->whereIn('user_devices.role', $allowedRoles);

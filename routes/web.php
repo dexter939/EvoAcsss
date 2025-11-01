@@ -11,6 +11,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Acs\VendorLibraryWebController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AlarmsController;
+use App\Http\Controllers\DeviceAccessController;
 
 require __DIR__.'/auth.php';
 
@@ -73,6 +74,14 @@ Route::prefix('acs')->name('acs.')->middleware('auth')->group(function () {
     Route::post('/devices/{id}/trigger-network-scan', [AcsController::class, 'triggerNetworkScan'])->name('devices.trigger-network-scan');
     Route::post('/devices/{id}/assign-service', [AcsController::class, 'assignDeviceToService'])->name('devices.assign-service');
     Route::post('/devices/{id}/assign-data-model', [AcsController::class, 'assignDataModel'])->name('devices.assign-data-model');
+    
+    // Device Access Management (Multi-Tenant)
+    Route::get('/devices/{device}/access', [DeviceAccessController::class, 'index'])->name('devices.access');
+    Route::get('/devices/{device}/access/users', [DeviceAccessController::class, 'getUsersWithAccess'])->name('devices.access.users');
+    Route::post('/devices/{device}/access/grant', [DeviceAccessController::class, 'grantAccess'])->name('devices.access.grant');
+    Route::post('/devices/{device}/access/bulk-grant', [DeviceAccessController::class, 'bulkGrantAccess'])->name('devices.access.bulk-grant');
+    Route::delete('/devices/{device}/access/{user}', [DeviceAccessController::class, 'revokeAccess'])->name('devices.access.revoke');
+    Route::put('/devices/{device}/access/{user}', [DeviceAccessController::class, 'updateRole'])->name('devices.access.update-role');
     
     // NAT Traversal: Pending Commands Management
     Route::post('/pending-commands/{id}/retry', [AcsController::class, 'retryPendingCommand'])->name('pending-commands.retry');
