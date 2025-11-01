@@ -13,15 +13,12 @@ This guide explains how to integrate Laravel Reverb WebSocket into the React Nat
 - **Broadcasting**: Enabled with ShouldBroadcast events
 
 ### 2. Broadcasting Channels (COMPLETED)
-Private channels configured in `routes/channels.php`:
+Private channels configured in `routes/channels.php` with **carrier-grade multi-tenant isolation**:
 
 ```php
-// Global alarms channel - all authenticated users
-Broadcast::channel('alarms', function ($user) {
-    return $user !== null;
-});
-
-// User-specific alarms
+// User-specific alarms channel (TENANT-SCOPED)
+// SECURITY: Only broadcast to users with explicit device access via user_devices pivot
+// Alarms without device association are NOT broadcast (logged only for security)
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });
@@ -39,21 +36,39 @@ Broadcast::channel('department.{department}', function ($user, $department) {
 });
 ```
 
+**Multi-Tenant Security - Production-Safe Implementation**:
+1. ✅ **Zero Global Channels**: No global `alarms` channel exists to prevent cross-tenant leakage
+2. ✅ **Explicit Device Access**: Backend broadcasts ONLY to users with device access via `user_devices` pivot
+3. ✅ **User-Scoped Channels**: Each alarm broadcasts to authorized user's private `user.{userId}` channel
+4. ✅ **No Fallback Leakage**: Alarms without device association are NOT broadcast (logged only)
+5. ✅ **Backward Compatible**: Payload includes both legacy `message` and new `title`/`description` fields
+6. **Result**: Carrier-grade multi-tenant isolation with zero cross-tenant data exposure
+
 ### 3. Broadcast Events (COMPLETED)
 - **AlarmCreated**: Dispatched when new alarm is raised (already integrated in `AlarmService`)
-- **Event Channels**: `alarms`, `user.{userId}`
+- **Event Channels**: `user.{userId}` (tenant-scoped, NO global channels)
 - **Event Name**: `alarm.created`
-- **Payload**:
+- **Multi-Tenant Isolation**: Broadcasts ONLY to users with explicit `user_devices` access
+- **No-Device Handling**: Alarms without device association are logged but NOT broadcast
+- **Payload** (backward compatible):
   ```json
   {
     "id": 123,
+    "device_id": 456,
     "device_serial": "SN123456",
     "severity": "critical",
-    "message": "Device offline",
+    "message": "Device Offline: SN123456",
+    "title": "Device Offline: SN123456",
+    "description": "Device has gone offline. Last seen: 2 hours ago",
     "status": "active",
+    "category": "connectivity",
+    "alarm_type": "device_offline",
+    "raised_at": "2025-11-01T12:00:00.000Z",
     "created_at": "2025-11-01T12:00:00.000Z"
   }
   ```
+  
+**Note**: Both `message` (legacy) and `title`/`description` (new) are included for backward compatibility.
 
 ## Mobile App Integration (React Native)
 
@@ -116,15 +131,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function AlarmsScreen() {
   const [alarms, setAlarms] = useState([]);
   const [echo, setEcho] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     const setupWebSocket = async () => {
       const token = await AsyncStorage.getItem('userToken');
+      const userIdStored = await AsyncStorage.getItem('userId');
+      setUserId(userIdStored);
+      
       const echoInstance = initializeWebSocket(token);
       
-      // Subscribe to private alarms channel
+      // Subscribe to user-specific private channel (TENANT-SCOPED)
+      // SECURITY: Only receive alarms for devices you have access to
       echoInstance
-        .private('alarms')
+        .private(`user.${userIdStored}`)
         .listen('.alarm.created', (event) => {
           console.log('New alarm received:', event);
           setAlarms((prev) => [event, ...prev]);

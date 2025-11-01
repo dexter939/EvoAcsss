@@ -8,14 +8,10 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 /**
- * Global alarms channel - all authenticated users
- */
-Broadcast::channel('alarms', function ($user) {
-    return $user !== null;
-});
-
-/**
- * User-specific alarms channel
+ * User-specific alarms channel (tenant-scoped)
+ * SECURITY: Only the specific user can subscribe to their own channel
+ * Alarms are broadcast ONLY to users with explicit device access via user_devices pivot
+ * NOTE: Alarms without device association are not broadcast (logged only)
  */
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
