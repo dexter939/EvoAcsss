@@ -27,6 +27,10 @@ args = "Prosody XMPP Server"
 task = "workflow.run"
 args = "ACS Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Reverb WebSocket Server"
+
 [[workflows.workflow]]
 name = "Queue Worker"
 author = "agent"
@@ -61,6 +65,18 @@ outputType = "webview"
 task = "shell.exec"
 args = "SESSION_DRIVER=database SESSION_SAME_SITE=none SESSION_SECURE_COOKIE=true SESSION_PARTITIONED_COOKIE=true php artisan config:clear && php artisan serve --host=0.0.0.0 --port=5000"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Reverb WebSocket Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "php artisan reverb:start --host=0.0.0.0 --port=8080"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 5000
@@ -124,6 +140,10 @@ externalPort = 3001
 
 [[ports]]
 localPort = 46615
+externalPort = 8080
+
+[[ports]]
+localPort = 8080
 externalPort = 8080
 
 [deployment]
