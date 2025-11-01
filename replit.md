@@ -27,7 +27,8 @@ The web interface utilizes the **Soft UI Dashboard Pro Laravel** template for a 
 - **Asynchronous Processing**: Laravel Horizon with Redis queues for provisioning, firmware, and TR-069 requests.
 - **API Security**: Dual authentication system for v1 RESTful endpoints - Laravel Sanctum token-based authentication for mobile apps (with AlarmController endpoints), API Key authentication for server-to-server calls, rate limiting, and DDoS protection.
 - **Security Hardening**: Enterprise-grade security features including RBAC, input validation, security audit logging, IP blacklist management, and a comprehensive Audit Log System.
-- **Multi-Tenant Device Access Control**: Role-based device scoping via `user_devices` pivot table with three permission levels, enforced by `EnsureDeviceAccess` middleware.
+- **Multi-Tenant Device Access Control**: Role-based device scoping via `user_devices` pivot table with three permission levels (viewer, manager, admin), enforced by `EnsureDeviceAccess` middleware. **NEW (November 2025)**: UserDeviceScope global scope for automatic query filtering, DeviceAccessController for grant/revoke operations, CpeDevicePolicy for fine-grained authorization, complete audit logging for access management.
+- **Real-Time Broadcasting (Laravel Reverb v1.6.0)**: WebSocket server for real-time alarm notifications with carrier-grade multi-tenant isolation. Broadcasts to user-specific private channels only for users with explicit device access. **LIMITATION**: Currently broadcasts only to users with explicit `user_devices` pivot entries; users with inherited tenant access require tenant_id migration for full coverage. See `docs/WEBSOCKET_LIMITATIONS_AND_ROADMAP.md` for migration path.
 - **Scalability**: Achieved through database optimizations, Redis caching, and a high-throughput queue system.
 - **Production Deployment Infrastructure**: Multi-tier deployment strategy supporting Docker/Compose and Kubernetes (with a production-grade Helm chart for carrier-grade deployments up to 100K+ devices).
 - **Monitoring & Observability**: Carrier-grade monitoring infrastructure with Prometheus metrics exporter, Grafana dashboards, PrometheusRule with alert definitions, and AlertManager configuration.
@@ -55,11 +56,12 @@ The web interface utilizes the **Soft UI Dashboard Pro Laravel** template for a 
 - **Mobile App Features**:
   - **Phase 1 MVP**: Authentication with token persistence, dashboard with device/alarm statistics, device list with search/filter, profile management.
   - **Phase 2 (COMPLETED)**: Real-time alarm monitoring (30s polling), alarm acknowledge/clear flows, TR-143 diagnostic execution (ping/traceroute), device details screen, QR scanner setup guide (expo-camera integration), push notifications setup documentation.
-  - **Phase 3 (Planned)**: WebSocket real-time alarm streaming, offline sync, advanced filtering, bulk operations.
+  - **Phase 3 (IMPLEMENTED - November 2025)**: Backend WebSocket infrastructure with Laravel Reverb, secure multi-tenant alarm broadcasting, complete mobile integration guide with code examples for WebSocket client setup, offline sync with AsyncStorage, advanced filtering UI, and bulk operations interface. See `docs/WEBSOCKET_MOBILE_INTEGRATION.md` for implementation details.
 
 # External Dependencies
 - **PostgreSQL 16+**: Primary relational database.
 - **Redis 7+**: Queue driver for Laravel Horizon, WebSocket message routing, and Prometheus metrics storage.
+- **Laravel Reverb v1.6.0**: Built-in WebSocket server for real-time broadcasting (NEW - November 2025).
 - **Laravel Horizon**: Manages Redis queues.
 - **Guzzle**: HTTP client.
 - **Google Protocol Buffers v4.32.1**: For TR-369 USP message encoding/decoding.
