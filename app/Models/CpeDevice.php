@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Traits\Auditable;
+use App\Models\Scopes\UserDeviceScope;
 
 /**
  * CpeDevice - Modello per dispositivi CPE (Customer Premises Equipment)
@@ -92,6 +94,19 @@ class CpeDevice extends Model
         'websocket_connected_at' => 'datetime',
         'last_websocket_ping' => 'datetime',
     ];
+
+    /**
+     * Bootstrap model - Apply global scopes
+     * 
+     * SECURITY: UserDeviceScope automatically filters devices by user access
+     * Super admins bypass this scope automatically
+     * 
+     * @return void
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new UserDeviceScope);
+    }
 
     /**
      * Relazione con servizio multi-tenant
@@ -223,6 +238,52 @@ class CpeDevice extends Model
     public function events(): HasMany
     {
         return $this->hasMany(DeviceEvent::class);
+    }
+
+    /**
+     * Relazione con utenti che hanno accesso a questo dispositivo (Multi-Tenant)
+     * Relationship with users who have access to this device (Multi-Tenant)
+     * 
+     * @return BelongsToMany
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'user_devices',
+            'cpe_device_id',
+            'user_id'
+        )->withPivot('role', 'department')
+          ->withTimestamps();
+    }
+
+    /**
+     * Verifica se un utente ha accesso a questo dispositivo
+     * Check if a user has access to this device
+     * 
+     * @param int|User $user User ID or model instance
+     * @param string|null $minRole Minimum required role (viewer, manager, admin)
+     * @return bool
+     */
+    public function hasUserAccess(int|User $user, ?string $minRole = null): bool
+    {
+        $userId = $user instanceof User ? $user->id : $user;
+        
+        $query = $this->users()->where('users.id', $userId);
+        
+        if ($minRole) {
+            // Role hierarchy: admin > manager > viewer
+            $roleHierarchy = [
+                'viewer' => ['viewer', 'manager', 'admin'],
+                'manager' => ['manager', 'admin'],
+                'admin' => ['admin']
+            ];
+            
+            $allowedRoles = $roleHierarchy[$minRole] ?? [];
+            $query->whereIn('user_devices.role', $allowedRoles);
+        }
+        
+        return $query->exists();
     }
 
     /**
