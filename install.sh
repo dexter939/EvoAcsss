@@ -352,7 +352,6 @@ install_dependencies_ubuntu() {
         php${PHP_VERSION}-curl \
         php${PHP_VERSION}-xml \
         php${PHP_VERSION}-bcmath \
-        php${PHP_VERSION}-json \
         php${PHP_VERSION}-redis \
         php${PHP_VERSION}-intl
     
@@ -401,7 +400,6 @@ install_dependencies_centos() {
         php-fpm \
         php-cli \
         php-pgsql \
-        php-json \
         php-mbstring \
         php-xml \
         php-gd \
