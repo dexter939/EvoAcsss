@@ -1,0 +1,195 @@
+# EvoACS GitLab CI/CD Pipeline
+# Carrier-grade ACS installation and testing
+
+image: ubuntu:22.04
+
+stages:
+  - lint
+  - test
+  - security
+  - build
+
+variables:
+  DEBIAN_FRONTEND: noninteractive
+
+# Cache composer and npm dependencies
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - vendor/
+    - node_modules/
+    - .composer-cache/
+
+# ============================================
+# LINT STAGE
+# ============================================
+
+shellcheck:
+  stage: lint
+  image: koalaman/shellcheck-alpine:stable
+  script:
+    - shellcheck install.sh
+  allow_failure: true
+  only:
+    changes:
+      - install.sh
+
+php-lint:
+  stage: lint
+  image: php:8.3-cli
+  before_script:
+    - apt-get update && apt-get install -y git unzip
+  script:
+    - find app -name "*.php" -exec php -l {} \;
+    - find config -name "*.php" -exec php -l {} \;
+    - find routes -name "*.php" -exec php -l {} \;
+  only:
+    - main
+    - merge_requests
+
+# ============================================
+# TEST STAGE
+# ============================================
+
+php-unit-tests:
+  stage: test
+  image: php:8.3-cli
+  services:
+    - postgres:16-alpine
+    - redis:7-alpine
+  variables:
+    POSTGRES_DB: acs_test
+    POSTGRES_USER: acs_user
+    POSTGRES_PASSWORD: acs_test_password
+    DATABASE_URL: "pgsql://acs_user:acs_test_password@postgres:5432/acs_test"
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    APP_ENV: testing
+    APP_KEY: base64:test1234567890123456789012345678901234567890=
+  before_script:
+    - apt-get update && apt-get install -y git unzip libpq-dev libzip-dev libpng-dev
+    - docker-php-ext-install pdo pdo_pgsql zip gd
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --no-interaction --prefer-dist --optimize-autoloader
+    - cp .env.example .env
+    - php artisan key:generate
+    - php artisan migrate --force
+  script:
+    - php artisan test --parallel
+  coverage: '/^\s*Lines:\s*\d+.\d+\%/'
+  artifacts:
+    reports:
+      junit: storage/logs/junit.xml
+    when: always
+  only:
+    - main
+    - merge_requests
+
+javascript-tests:
+  stage: test
+  image: node:20-alpine
+  before_script:
+    - npm ci
+  script:
+    - npm run lint || true
+    - npm run build
+  only:
+    - main
+    - merge_requests
+
+# ============================================
+# SECURITY STAGE
+# ============================================
+
+dependency-scan:
+  stage: security
+  image: php:8.3-cli
+  before_script:
+    - apt-get update && apt-get install -y git unzip
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  script:
+    - composer audit
+  allow_failure: true
+  only:
+    - main
+    - merge_requests
+
+npm-audit:
+  stage: security
+  image: node:20-alpine
+  script:
+    - npm audit --audit-level=high || true
+  allow_failure: true
+  only:
+    - main
+    - merge_requests
+
+# ============================================
+# BUILD STAGE
+# ============================================
+
+build-production:
+  stage: build
+  image: php:8.3-cli
+  before_script:
+    - apt-get update && apt-get install -y git unzip nodejs npm libpq-dev libzip-dev libpng-dev
+    - docker-php-ext-install pdo pdo_pgsql zip gd
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+    - npm ci
+  script:
+    - npm run build
+    - php artisan config:cache
+    - php artisan route:cache
+    - php artisan view:cache
+    - echo "Build completed successfully"
+  artifacts:
+    paths:
+      - public/build/
+      - vendor/
+      - bootstrap/cache/
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+
+# ============================================
+# DEPLOYMENT (Manual trigger)
+# ============================================
+
+.deploy_template: &deploy_template
+  stage: .post
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $DEPLOY_SERVER >> ~/.ssh/known_hosts
+  when: manual
+
+deploy-staging:
+  <<: *deploy_template
+  script:
+    - echo "Deploying to staging server..."
+    - rsync -avz --exclude='.git' --exclude='node_modules' ./ $SSH_USER@$DEPLOY_SERVER:$STAGING_PATH/
+    - ssh $SSH_USER@$DEPLOY_SERVER "cd $STAGING_PATH && php artisan migrate --force && php artisan config:cache"
+  environment:
+    name: staging
+    url: https://staging.example.com
+  only:
+    - develop
+
+deploy-production:
+  <<: *deploy_template
+  script:
+    - echo "Deploying to production server..."
+    - rsync -avz --exclude='.git' --exclude='node_modules' ./ $SSH_USER@$DEPLOY_SERVER:$PRODUCTION_PATH/
+    - ssh $SSH_USER@$DEPLOY_SERVER "cd $PRODUCTION_PATH && php artisan migrate --force && php artisan config:cache && sudo supervisorctl restart all"
+  environment:
+    name: production
+    url: https://acs.example.com
+  only:
+    - main
+    - tags
