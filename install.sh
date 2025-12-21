@@ -8,6 +8,11 @@
 # - Ubuntu 22.04+ / Debian 11+ / CentOS 8+
 # - Accesso root o sudo
 # - Connessione internet
+#
+# Uso:
+#   sudo ./install.sh                    # Installazione con valori default
+#   sudo ./install.sh --interactive      # Installazione interattiva
+#   sudo ./install.sh --help             # Mostra aiuto
 ###############################################################################
 
 set -e
@@ -17,19 +22,45 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Variabili di configurazione
+###############################################################################
+# CONFIGURAZIONE PERSONALIZZABILE
+# Modifica questi valori PRIMA di eseguire lo script, oppure usa --interactive
+###############################################################################
+
+# Dominio del server ACS (usato per Nginx e URL applicazione)
+DOMAIN="${DOMAIN:-acs.tuodominio.com}"
+
+# Configurazione Database PostgreSQL
+DB_NAME="${DB_NAME:-acs_production}"
+DB_USER="${DB_USER:-acs_user}"
+DB_PASSWORD="${DB_PASSWORD:-}"  # Se vuoto, verrà generata automaticamente
+
+# Porta dell'applicazione Laravel
+APP_PORT="${APP_PORT:-5000}"
+
+# Repository Git (lascia vuoto per usare il repository ufficiale)
+REPO_URL="${REPO_URL:-https://github.com/dexter939/EvoAcs.git}"
+
+# Abilita SSL automatico con Let's Encrypt (true/false)
+ENABLE_SSL="${ENABLE_SSL:-false}"
+
+# Email per Let's Encrypt (obbligatorio se ENABLE_SSL=true)
+SSL_EMAIL="${SSL_EMAIL:-}"
+
+###############################################################################
+# FINE CONFIGURAZIONE - Non modificare sotto questa linea
+###############################################################################
+
+# Variabili di sistema (non modificare)
 APP_NAME="ACS Server"
 APP_DIR="/opt/acs"
 APP_USER="acs"
 PHP_VERSION="8.3"
 POSTGRES_VERSION="16"
 REDIS_VERSION="7.0"
-DOMAIN="${DOMAIN:-localhost}"
-APP_PORT="${APP_PORT:-5000}"
-DB_NAME="${DB_NAME:-acs_production}"
-DB_USER="${DB_USER:-acs_user}"
 
 # Funzioni helper
 print_info() {
@@ -46,6 +77,176 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_header() {
+    echo -e "${CYAN}$1${NC}"
+}
+
+show_help() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo -e "${GREEN}   ACS (Auto Configuration Server) - Script di Installazione${NC}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Uso:"
+    echo "  sudo ./install.sh [OPZIONI]"
+    echo ""
+    echo "Opzioni:"
+    echo "  --interactive    Modalità interattiva (richiede input utente)"
+    echo "  --help, -h       Mostra questo messaggio di aiuto"
+    echo "  --dry-run        Mostra cosa verrebbe installato senza eseguire"
+    echo ""
+    echo "Variabili d'ambiente (alternativa alla modifica dello script):"
+    echo "  DOMAIN           Dominio del server (default: acs.tuodominio.com)"
+    echo "  DB_NAME          Nome database PostgreSQL (default: acs_production)"
+    echo "  DB_USER          Utente database (default: acs_user)"
+    echo "  DB_PASSWORD      Password database (generata se vuota)"
+    echo "  APP_PORT         Porta applicazione (default: 5000)"
+    echo "  REPO_URL         URL repository Git"
+    echo "  ENABLE_SSL       Abilita SSL con Let's Encrypt (true/false)"
+    echo "  SSL_EMAIL        Email per Let's Encrypt"
+    echo ""
+    echo "Esempi:"
+    echo "  # Installazione con configurazione personalizzata"
+    echo "  sudo DOMAIN=acs.miodominio.com DB_PASSWORD=MiaPassword123 ./install.sh"
+    echo ""
+    echo "  # Installazione interattiva"
+    echo "  sudo ./install.sh --interactive"
+    echo ""
+    echo "  # Installazione con SSL"
+    echo "  sudo DOMAIN=acs.miodominio.com ENABLE_SSL=true SSL_EMAIL=admin@miodominio.com ./install.sh"
+    echo ""
+    exit 0
+}
+
+interactive_setup() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo -e "${GREEN}   ACS - Configurazione Interattiva${NC}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    # Dominio
+    read -p "Dominio del server [${DOMAIN}]: " input
+    DOMAIN="${input:-$DOMAIN}"
+    
+    # Porta
+    read -p "Porta applicazione [${APP_PORT}]: " input
+    APP_PORT="${input:-$APP_PORT}"
+    
+    # Database
+    echo ""
+    print_header "Configurazione Database PostgreSQL:"
+    read -p "Nome database [${DB_NAME}]: " input
+    DB_NAME="${input:-$DB_NAME}"
+    
+    read -p "Utente database [${DB_USER}]: " input
+    DB_USER="${input:-$DB_USER}"
+    
+    read -sp "Password database (lascia vuoto per generare automaticamente): " input
+    echo ""
+    DB_PASSWORD="${input:-$DB_PASSWORD}"
+    
+    # SSL
+    echo ""
+    print_header "Configurazione SSL:"
+    read -p "Abilitare SSL con Let's Encrypt? (s/n) [n]: " input
+    if [[ "$input" =~ ^[Ss]$ ]]; then
+        ENABLE_SSL="true"
+        read -p "Email per Let's Encrypt: " SSL_EMAIL
+        if [ -z "$SSL_EMAIL" ]; then
+            print_error "Email obbligatoria per Let's Encrypt"
+            exit 1
+        fi
+    fi
+    
+    # Repository
+    echo ""
+    read -p "URL repository Git [${REPO_URL}]: " input
+    REPO_URL="${input:-$REPO_URL}"
+    
+    # Conferma
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    print_header "Riepilogo Configurazione:"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Dominio:        $DOMAIN"
+    echo "  Porta:          $APP_PORT"
+    echo "  Database:       $DB_NAME"
+    echo "  Utente DB:      $DB_USER"
+    echo "  Password DB:    ${DB_PASSWORD:-[generata automaticamente]}"
+    echo "  SSL:            $ENABLE_SSL"
+    echo "  Repository:     $REPO_URL"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    read -p "Procedere con l'installazione? (s/n) [s]: " confirm
+    if [[ "$confirm" =~ ^[Nn]$ ]]; then
+        print_warning "Installazione annullata dall'utente"
+        exit 0
+    fi
+}
+
+dry_run() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo -e "${GREEN}   ACS - Dry Run (Simulazione)${NC}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Configurazione che verrà utilizzata:"
+    echo "  • Dominio: $DOMAIN"
+    echo "  • Porta: $APP_PORT"
+    echo "  • Database: $DB_NAME (utente: $DB_USER)"
+    echo "  • Directory installazione: $APP_DIR"
+    echo "  • Utente sistema: $APP_USER"
+    echo "  • PHP: $PHP_VERSION"
+    echo "  • PostgreSQL: $POSTGRES_VERSION"
+    echo "  • SSL: $ENABLE_SSL"
+    echo ""
+    echo "Pacchetti che verranno installati:"
+    echo "  • PHP $PHP_VERSION con estensioni (fpm, cli, pgsql, redis, etc.)"
+    echo "  • PostgreSQL $POSTGRES_VERSION"
+    echo "  • Redis"
+    echo "  • Nginx"
+    echo "  • Prosody XMPP Server"
+    echo "  • Supervisor"
+    echo "  • Composer"
+    if [ "$ENABLE_SSL" = "true" ]; then
+        echo "  • Certbot (Let's Encrypt)"
+    fi
+    echo ""
+    echo "Servizi che verranno configurati:"
+    echo "  • acs-server.service (Laravel application)"
+    echo "  • nginx (reverse proxy)"
+    echo "  • postgresql (database)"
+    echo "  • redis (cache/queue)"
+    echo "  • prosody (XMPP per TR-369)"
+    echo "  • supervisor (queue workers)"
+    echo ""
+    exit 0
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --interactive)
+                INTERACTIVE_MODE=true
+                shift
+                ;;
+            --help|-h)
+                show_help
+                ;;
+            --dry-run)
+                dry_run
+                ;;
+            *)
+                print_error "Opzione sconosciuta: $1"
+                echo "Usa --help per vedere le opzioni disponibili"
+                exit 1
+                ;;
+        esac
+    done
 }
 
 check_root() {
@@ -610,16 +811,58 @@ set_permissions() {
     print_success "Permessi impostati"
 }
 
+setup_ssl() {
+    if [ "$ENABLE_SSL" != "true" ]; then
+        return 0
+    fi
+    
+    print_info "Configurazione SSL con Let's Encrypt..."
+    
+    if [ -z "$SSL_EMAIL" ]; then
+        print_error "Email obbligatoria per Let's Encrypt (SSL_EMAIL)"
+        return 1
+    fi
+    
+    # Installa Certbot
+    if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
+        apt-get install -y certbot python3-certbot-nginx
+    else
+        dnf install -y certbot python3-certbot-nginx
+    fi
+    
+    # Ottieni certificato
+    certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL
+    
+    # Configura rinnovo automatico
+    systemctl enable certbot.timer
+    systemctl start certbot.timer
+    
+    # Aggiorna .env con HTTPS
+    sed -i "s|APP_URL=http://$DOMAIN|APP_URL=https://$DOMAIN|g" $APP_DIR/.env
+    
+    # Ricarica configurazione
+    cd $APP_DIR
+    sudo -u $APP_USER php artisan config:cache
+    
+    print_success "SSL configurato per $DOMAIN"
+}
+
 display_summary() {
+    local PROTOCOL="http"
+    if [ "$ENABLE_SSL" = "true" ]; then
+        PROTOCOL="https"
+    fi
+    
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     print_success "Installazione completata con successo!"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo -e "${BLUE}Informazioni Sistema:${NC}"
-    echo "  • URL applicazione: http://$DOMAIN"
+    echo "  • URL applicazione: ${PROTOCOL}://$DOMAIN"
     echo "  • Directory installazione: $APP_DIR"
     echo "  • Utente applicazione: $APP_USER"
+    echo "  • SSL: $ENABLE_SSL"
     echo ""
     echo -e "${BLUE}Credenziali Default:${NC}"
     echo "  • Email: admin@acs.local"
@@ -650,12 +893,22 @@ display_summary() {
     echo "  • Clear cache: cd $APP_DIR && php artisan cache:clear"
     echo "  • View logs: tail -f $APP_DIR/storage/logs/laravel.log"
     echo "  • Restart queues: supervisorctl restart all"
+    if [ "$ENABLE_SSL" = "true" ]; then
+        echo "  • Rinnovo SSL: certbot renew"
+    fi
+    echo ""
+    echo -e "${BLUE}Protocolli TR Supportati:${NC}"
+    echo "  • TR-069, TR-104, TR-106, TR-111, TR-135"
+    echo "  • TR-140, TR-157, TR-181, TR-262, TR-369"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 }
 
 main() {
+    # Parse argomenti
+    parse_args "$@"
+    
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo -e "${GREEN}   ACS (Auto Configuration Server) - Installazione${NC}"
     echo -e "${BLUE}   Carrier-grade TR-069/TR-369 CPE Management Platform${NC}"
@@ -664,6 +917,20 @@ main() {
     
     check_root
     detect_os
+    
+    # Modalità interattiva se richiesta
+    if [ "$INTERACTIVE_MODE" = "true" ]; then
+        interactive_setup
+    fi
+    
+    # Mostra configurazione attuale
+    echo ""
+    print_info "Configurazione corrente:"
+    echo "  • Dominio: $DOMAIN"
+    echo "  • Porta: $APP_PORT"
+    echo "  • Database: $DB_NAME (utente: $DB_USER)"
+    echo "  • SSL: $ENABLE_SSL"
+    echo ""
     
     # Installazione dipendenze OS-specific
     case $OS in
@@ -695,6 +962,7 @@ main() {
     setup_firewall
     setup_cron
     create_admin_user
+    setup_ssl
     
     display_summary
 }
