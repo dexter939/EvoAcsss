@@ -459,29 +459,60 @@ create_app_user() {
 setup_database() {
     print_info "Configurazione database PostgreSQL..."
     
-    # Genera password casuale se non fornita
+    # Avvia PostgreSQL se non attivo
+    systemctl start postgresql
+    systemctl enable postgresql
+    
+    # Genera password casuale se non fornita (solo caratteri alfanumerici per evitare problemi)
     if [ -z "$DB_PASSWORD" ]; then
-        DB_PASSWORD=$(openssl rand -base64 32)
+        DB_PASSWORD=$(openssl rand -hex 16)
         print_info "Password DB generata automaticamente"
     fi
     
-    # Crea database e utente
-    sudo -u postgres psql <<EOF
--- Crea utente
-CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
-
--- Crea database
-CREATE DATABASE $DB_NAME OWNER $DB_USER;
-
--- Grant privilegi
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
-
--- Abilita estensioni
-\c $DB_NAME
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-\q
-EOF
+    # Configura pg_hba.conf per autenticazione password
+    PG_HBA_FILE=$(sudo -u postgres psql -t -c "SHOW hba_file;" | tr -d ' ')
+    if [ -f "$PG_HBA_FILE" ]; then
+        # Backup originale
+        cp "$PG_HBA_FILE" "${PG_HBA_FILE}.backup"
+        
+        # Verifica se la riga per autenticazione md5/scram esiste
+        if ! grep -q "host.*all.*all.*127.0.0.1.*md5\|scram-sha-256" "$PG_HBA_FILE"; then
+            print_info "Configurazione pg_hba.conf per autenticazione password..."
+            # Aggiungi autenticazione md5 per connessioni locali
+            sed -i '/^# IPv4 local connections:/a host    all             all             127.0.0.1/32            md5' "$PG_HBA_FILE"
+        fi
+    fi
+    
+    # Ricarica configurazione PostgreSQL
+    systemctl reload postgresql
+    sleep 2
+    
+    # Elimina utente e database se esistono (reinstallazione pulita)
+    print_info "Creazione utente e database..."
+    sudo -u postgres psql -c "DROP DATABASE IF EXISTS $DB_NAME;" 2>/dev/null || true
+    sudo -u postgres psql -c "DROP USER IF EXISTS $DB_USER;" 2>/dev/null || true
+    
+    # Crea utente con password (usando formato sicuro)
+    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+    
+    # Crea database
+    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+    
+    # Grant privilegi
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+    
+    # Abilita estensioni
+    sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+    
+    # Verifica connessione
+    print_info "Verifica connessione database..."
+    if PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -U $DB_USER -d $DB_NAME -c "SELECT 1;" >/dev/null 2>&1; then
+        print_success "Connessione database verificata!"
+    else
+        print_warning "Impossibile verificare la connessione, potrebbe essere necessario riavviare PostgreSQL"
+        systemctl restart postgresql
+        sleep 3
+    fi
     
     print_success "Database configurato: $DB_NAME"
     
@@ -490,6 +521,8 @@ EOF
 DB_NAME=$DB_NAME
 DB_USER=$DB_USER
 DB_PASSWORD=$DB_PASSWORD
+DB_HOST=127.0.0.1
+DB_PORT=5432
 EOF
     chmod 600 /root/.acs_db_credentials
     print_info "Credenziali salvate in /root/.acs_db_credentials"
