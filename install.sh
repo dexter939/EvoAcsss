@@ -262,6 +262,51 @@ detect_os() {
         OS=$ID
         OS_VERSION=$VERSION_ID
         print_info "OS rilevato: $NAME $VERSION"
+        
+        # Verifica versioni Ubuntu supportate
+        if [ "$OS" = "ubuntu" ]; then
+            # Estrai major version
+            MAJOR_VERSION=$(echo "$OS_VERSION" | cut -d. -f1)
+            
+            # Versioni supportate: 20.04, 22.04, 24.04 (solo LTS)
+            case "$OS_VERSION" in
+                20.04|22.04|24.04)
+                    print_success "Versione Ubuntu supportata: $OS_VERSION LTS"
+                    ;;
+                *)
+                    echo ""
+                    print_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    print_error "VERSIONE UBUNTU NON SUPPORTATA: $OS_VERSION"
+                    print_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    echo ""
+                    echo -e "${YELLOW}Il PPA ondrej/php (necessario per PHP 8.3) supporta solo versioni LTS.${NC}"
+                    echo ""
+                    echo -e "${BLUE}Versioni supportate:${NC}"
+                    echo "  • Ubuntu 20.04 LTS (Focal Fossa)"
+                    echo "  • Ubuntu 22.04 LTS (Jammy Jellyfish) - Consigliata"
+                    echo "  • Ubuntu 24.04 LTS (Noble Numbat)"
+                    echo ""
+                    echo -e "${YELLOW}Soluzione:${NC}"
+                    echo "  1. Reinstalla il server con Ubuntu 22.04 LTS o 24.04 LTS"
+                    echo "  2. Esegui nuovamente questo script"
+                    echo ""
+                    echo -e "${RED}Ubuntu 25.04 (Plucky Puffin) è una versione di sviluppo,${NC}"
+                    echo -e "${RED}NON una release stabile LTS.${NC}"
+                    echo ""
+                    exit 1
+                    ;;
+            esac
+        fi
+        
+        # Verifica versioni Debian supportate
+        if [ "$OS" = "debian" ]; then
+            MAJOR_VERSION=$(echo "$OS_VERSION" | cut -d. -f1)
+            if [ "$MAJOR_VERSION" -lt 11 ]; then
+                print_error "Debian $OS_VERSION non supportato. Richiesto Debian 11+."
+                exit 1
+            fi
+            print_success "Versione Debian supportata: $OS_VERSION"
+        fi
     else
         print_error "Impossibile rilevare il sistema operativo"
         exit 1
