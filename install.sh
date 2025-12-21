@@ -314,7 +314,7 @@ detect_os() {
 }
 
 install_dependencies_ubuntu() {
-    print_info "Installazione dipendenze per Ubuntu/Debian..."
+    print_info "Installazione dipendenze per Ubuntu..."
     
     # Update package lists
     apt-get update -y
@@ -333,7 +333,7 @@ install_dependencies_ubuntu() {
         gnupg \
         lsb-release
     
-    # Repository PHP
+    # Repository PHP (ondrej PPA per Ubuntu)
     add-apt-repository ppa:ondrej/php -y
     apt-get update -y
     
@@ -370,10 +370,89 @@ install_dependencies_ubuntu() {
     print_info "Installazione Prosody XMPP Server..."
     apt-get install -y prosody lua-dbi-postgresql
     
+    # Salva percorso socket PHP-FPM per Nginx
+    PHP_FPM_SOCKET="/var/run/php/php${PHP_VERSION}-fpm.sock"
+    
+    # Abilita e avvia PHP-FPM
+    systemctl enable php${PHP_VERSION}-fpm
+    systemctl start php${PHP_VERSION}-fpm
+    
     # Composer
     install_composer
     
-    print_success "Dipendenze installate con successo"
+    print_success "Dipendenze Ubuntu installate con successo"
+}
+
+install_dependencies_debian() {
+    print_info "Installazione dipendenze per Debian..."
+    
+    # Update package lists
+    apt-get update -y
+    
+    # Installazione pacchetti di sistema
+    apt-get install -y \
+        software-properties-common \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        wget \
+        git \
+        unzip \
+        supervisor \
+        nginx \
+        gnupg \
+        lsb-release
+    
+    # Repository PHP Sury per Debian (NON Ubuntu PPA!)
+    print_info "Configurazione repository Sury PHP per Debian..."
+    curl -sSLo /usr/share/keyrings/deb.sury.org-php.gpg https://packages.sury.org/php/apt.gpg
+    echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list
+    apt-get update -y
+    
+    # Installazione PHP
+    print_info "Installazione PHP ${PHP_VERSION}..."
+    apt-get install -y \
+        php${PHP_VERSION} \
+        php${PHP_VERSION}-fpm \
+        php${PHP_VERSION}-cli \
+        php${PHP_VERSION}-common \
+        php${PHP_VERSION}-mysql \
+        php${PHP_VERSION}-pgsql \
+        php${PHP_VERSION}-zip \
+        php${PHP_VERSION}-gd \
+        php${PHP_VERSION}-mbstring \
+        php${PHP_VERSION}-curl \
+        php${PHP_VERSION}-xml \
+        php${PHP_VERSION}-bcmath \
+        php${PHP_VERSION}-redis \
+        php${PHP_VERSION}-intl
+    
+    # PostgreSQL
+    print_info "Installazione PostgreSQL ${POSTGRES_VERSION}..."
+    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+    apt-get update -y
+    apt-get install -y postgresql-${POSTGRES_VERSION} postgresql-client-${POSTGRES_VERSION}
+    
+    # Redis
+    print_info "Installazione Redis..."
+    apt-get install -y redis-server
+    
+    # Prosody XMPP Server
+    print_info "Installazione Prosody XMPP Server..."
+    apt-get install -y prosody lua-dbi-postgresql
+    
+    # Salva percorso socket PHP-FPM per Nginx
+    PHP_FPM_SOCKET="/var/run/php/php${PHP_VERSION}-fpm.sock"
+    
+    # Abilita e avvia PHP-FPM
+    systemctl enable php${PHP_VERSION}-fpm
+    systemctl start php${PHP_VERSION}-fpm
+    
+    # Composer
+    install_composer
+    
+    print_success "Dipendenze Debian installate con successo"
 }
 
 install_dependencies_centos() {
@@ -384,7 +463,7 @@ install_dependencies_centos() {
     dnf update -y
     
     # Remi repository per PHP
-    dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+    dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm || dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
     dnf module reset php -y
     dnf module enable php:remi-${PHP_VERSION} -y
     
@@ -409,11 +488,16 @@ install_dependencies_centos() {
         php-redis \
         php-intl
     
-    # PostgreSQL
+    # PostgreSQL - installa dal repository ufficiale
+    dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm || true
+    dnf -qy module disable postgresql
     dnf install -y postgresql${POSTGRES_VERSION}-server postgresql${POSTGRES_VERSION}
     /usr/pgsql-${POSTGRES_VERSION}/bin/postgresql-${POSTGRES_VERSION}-setup initdb
-    systemctl enable postgresql-${POSTGRES_VERSION}
-    systemctl start postgresql-${POSTGRES_VERSION}
+    
+    # Nome servizio PostgreSQL su CentOS/RHEL
+    PG_SERVICE="postgresql-${POSTGRES_VERSION}"
+    systemctl enable $PG_SERVICE
+    systemctl start $PG_SERVICE
     
     # Redis
     dnf install -y redis
@@ -421,11 +505,18 @@ install_dependencies_centos() {
     systemctl start redis
     
     # Prosody
-    dnf install -y prosody
+    dnf install -y prosody || print_warning "Prosody non disponibile nei repository, installalo manualmente"
+    
+    # Salva percorso socket PHP-FPM per Nginx (CentOS usa path diverso)
+    PHP_FPM_SOCKET="/run/php-fpm/www.sock"
+    
+    # Abilita e avvia PHP-FPM
+    systemctl enable php-fpm
+    systemctl start php-fpm
     
     install_composer
     
-    print_success "Dipendenze installate con successo"
+    print_success "Dipendenze CentOS/RHEL installate con successo"
 }
 
 install_composer() {
@@ -459,9 +550,16 @@ create_app_user() {
 setup_database() {
     print_info "Configurazione database PostgreSQL..."
     
+    # Determina il nome del servizio PostgreSQL in base al sistema operativo
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ] || [ "$OS" = "rocky" ] || [ "$OS" = "almalinux" ]; then
+        PG_SERVICE="postgresql-${POSTGRES_VERSION}"
+    else
+        PG_SERVICE="postgresql"
+    fi
+    
     # Avvia PostgreSQL se non attivo
-    systemctl start postgresql
-    systemctl enable postgresql
+    systemctl start $PG_SERVICE || systemctl start postgresql || print_warning "Impossibile avviare PostgreSQL"
+    systemctl enable $PG_SERVICE || systemctl enable postgresql || true
     
     # Genera password casuale se non fornita (solo caratteri alfanumerici per evitare problemi)
     if [ -z "$DB_PASSWORD" ]; then
@@ -469,9 +567,15 @@ setup_database() {
         print_info "Password DB generata automaticamente"
     fi
     
+    # Sanitizza input per prevenire SQL injection
+    # Rimuovi caratteri speciali potenzialmente pericolosi
+    DB_NAME_SAFE=$(echo "$DB_NAME" | tr -cd 'a-zA-Z0-9_')
+    DB_USER_SAFE=$(echo "$DB_USER" | tr -cd 'a-zA-Z0-9_')
+    DB_PASSWORD_SAFE=$(echo "$DB_PASSWORD" | tr -cd 'a-zA-Z0-9_')
+    
     # Configura pg_hba.conf per autenticazione password
-    PG_HBA_FILE=$(sudo -u postgres psql -t -c "SHOW hba_file;" | tr -d ' ')
-    if [ -f "$PG_HBA_FILE" ]; then
+    PG_HBA_FILE=$(sudo -u postgres psql -t -c "SHOW hba_file;" 2>/dev/null | tr -d ' ' || echo "")
+    if [ -n "$PG_HBA_FILE" ] && [ -f "$PG_HBA_FILE" ]; then
         # Backup originale
         cp "$PG_HBA_FILE" "${PG_HBA_FILE}.backup"
         
@@ -479,38 +583,46 @@ setup_database() {
         if ! grep -q "host.*all.*all.*127.0.0.1.*md5\|scram-sha-256" "$PG_HBA_FILE"; then
             print_info "Configurazione pg_hba.conf per autenticazione password..."
             # Aggiungi autenticazione md5 per connessioni locali
-            sed -i '/^# IPv4 local connections:/a host    all             all             127.0.0.1/32            md5' "$PG_HBA_FILE"
+            sed -i '/^# IPv4 local connections:/a host    all             all             127.0.0.1/32            md5' "$PG_HBA_FILE" || \
+            echo "host    all             all             127.0.0.1/32            md5" >> "$PG_HBA_FILE"
         fi
+    else
+        print_warning "pg_hba.conf non trovato, configurazione manuale potrebbe essere necessaria"
     fi
     
     # Ricarica configurazione PostgreSQL
-    systemctl reload postgresql
+    systemctl reload $PG_SERVICE 2>/dev/null || systemctl reload postgresql 2>/dev/null || true
     sleep 2
     
     # Elimina utente e database se esistono (reinstallazione pulita)
     print_info "Creazione utente e database..."
-    sudo -u postgres psql -c "DROP DATABASE IF EXISTS $DB_NAME;" 2>/dev/null || true
-    sudo -u postgres psql -c "DROP USER IF EXISTS $DB_USER;" 2>/dev/null || true
+    sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_NAME_SAFE};" 2>/dev/null || true
+    sudo -u postgres psql -c "DROP USER IF EXISTS ${DB_USER_SAFE};" 2>/dev/null || true
     
     # Crea utente con password (usando formato sicuro)
-    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+    sudo -u postgres psql -c "CREATE USER ${DB_USER_SAFE} WITH PASSWORD '${DB_PASSWORD_SAFE}';"
     
     # Crea database
-    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+    sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME_SAFE} OWNER ${DB_USER_SAFE};"
     
     # Grant privilegi
-    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME_SAFE} TO ${DB_USER_SAFE};"
     
     # Abilita estensioni
-    sudo -u postgres psql -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+    sudo -u postgres psql -d ${DB_NAME_SAFE} -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+    
+    # Aggiorna variabili con valori sanitizzati
+    DB_NAME="$DB_NAME_SAFE"
+    DB_USER="$DB_USER_SAFE"
+    DB_PASSWORD="$DB_PASSWORD_SAFE"
     
     # Verifica connessione
     print_info "Verifica connessione database..."
     if PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -U $DB_USER -d $DB_NAME -c "SELECT 1;" >/dev/null 2>&1; then
         print_success "Connessione database verificata!"
     else
-        print_warning "Impossibile verificare la connessione, potrebbe essere necessario riavviare PostgreSQL"
-        systemctl restart postgresql
+        print_warning "Impossibile verificare la connessione, riavvio PostgreSQL..."
+        systemctl restart $PG_SERVICE 2>/dev/null || systemctl restart postgresql 2>/dev/null
         sleep 3
     fi
     
@@ -523,6 +635,7 @@ DB_USER=$DB_USER
 DB_PASSWORD=$DB_PASSWORD
 DB_HOST=127.0.0.1
 DB_PORT=5432
+PG_SERVICE=$PG_SERVICE
 EOF
     chmod 600 /root/.acs_db_credentials
     print_info "Credenziali salvate in /root/.acs_db_credentials"
@@ -658,7 +771,21 @@ optimize_laravel() {
 configure_nginx() {
     print_info "Configurazione Nginx..."
     
-    cat > /etc/nginx/sites-available/acs <<EOF
+    # Determina il socket PHP-FPM in base al sistema operativo
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ] || [ "$OS" = "rocky" ] || [ "$OS" = "almalinux" ]; then
+        PHP_FPM_SOCKET="/run/php-fpm/www.sock"
+        NGINX_CONF_DIR="/etc/nginx/conf.d"
+        NGINX_SITE_FILE="$NGINX_CONF_DIR/acs.conf"
+    else
+        PHP_FPM_SOCKET="/var/run/php/php${PHP_VERSION}-fpm.sock"
+        NGINX_CONF_DIR="/etc/nginx/sites-available"
+        NGINX_SITE_FILE="$NGINX_CONF_DIR/acs"
+    fi
+    
+    # Crea directory se non esiste
+    mkdir -p "$NGINX_CONF_DIR"
+    
+    cat > "$NGINX_SITE_FILE" <<EOF
 server {
     listen 80;
     listen [::]:80;
@@ -669,12 +796,17 @@ server {
     
     client_max_body_size 100M;
     
+    # Disable caching for development/iframe compatibility
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    add_header Pragma "no-cache";
+    add_header Expires "0";
+    
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
     }
     
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php${PHP_VERSION}-fpm.sock;
+        fastcgi_pass unix:${PHP_FPM_SOCKET};
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
@@ -690,15 +822,28 @@ server {
         try_files \$uri \$uri/ /index.php?\$query_string;
     }
     
+    # WebSocket per Laravel Reverb
+    location /app {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_read_timeout 86400;
+    }
+    
     # Logs
     access_log /var/log/nginx/acs-access.log;
     error_log /var/log/nginx/acs-error.log;
 }
 EOF
     
-    # Abilita site
-    ln -sf /etc/nginx/sites-available/acs /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
+    # Abilita site (solo per Debian/Ubuntu che usano sites-enabled)
+    if [ -d "/etc/nginx/sites-enabled" ]; then
+        ln -sf /etc/nginx/sites-available/acs /etc/nginx/sites-enabled/
+        rm -f /etc/nginx/sites-enabled/default
+    fi
     
     # Test configurazione
     nginx -t
@@ -713,13 +858,24 @@ EOF
 configure_supervisor() {
     print_info "Configurazione Supervisor..."
     
-    # Crea directory log
+    # Determina il nome del servizio Supervisor in base al sistema operativo
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ] || [ "$OS" = "rocky" ] || [ "$OS" = "almalinux" ]; then
+        SUPERVISOR_SERVICE="supervisord"
+        SUPERVISOR_CONF_DIR="/etc/supervisord.d"
+        SUPERVISOR_MAIN_CONF="/etc/supervisord.conf"
+    else
+        SUPERVISOR_SERVICE="supervisor"
+        SUPERVISOR_CONF_DIR="/etc/supervisor/conf.d"
+        SUPERVISOR_MAIN_CONF="/etc/supervisor/supervisord.conf"
+    fi
+    
+    # Crea directory
     mkdir -p /var/log/supervisor
+    mkdir -p "$SUPERVISOR_CONF_DIR"
     
     # Assicurati che la configurazione principale di Supervisor sia corretta
-    # Su alcuni sistemi la configurazione base potrebbe mancare delle sezioni necessarie
-    if [ ! -f /etc/supervisor/supervisord.conf ]; then
-        cat > /etc/supervisor/supervisord.conf <<MAINCONF
+    if [ ! -f "$SUPERVISOR_MAIN_CONF" ]; then
+        cat > "$SUPERVISOR_MAIN_CONF" <<MAINCONF
 [unix_http_server]
 file=/var/run/supervisor.sock
 chmod=0700
@@ -736,14 +892,14 @@ supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 serverurl=unix:///var/run/supervisor.sock
 
 [include]
-files = /etc/supervisor/conf.d/*.conf
+files = ${SUPERVISOR_CONF_DIR}/*.conf
 MAINCONF
     fi
     
     # Verifica che [supervisorctl] sia presente nel file principale
-    if ! grep -q "\[supervisorctl\]" /etc/supervisor/supervisord.conf 2>/dev/null; then
+    if ! grep -q "\[supervisorctl\]" "$SUPERVISOR_MAIN_CONF" 2>/dev/null; then
         print_warning "Aggiunta sezione [supervisorctl] alla configurazione..."
-        cat >> /etc/supervisor/supervisord.conf <<ADDCONF
+        cat >> "$SUPERVISOR_MAIN_CONF" <<ADDCONF
 
 [supervisorctl]
 serverurl=unix:///var/run/supervisor.sock
@@ -751,7 +907,7 @@ ADDCONF
     fi
     
     # Configurazione programmi ACS
-    cat > /etc/supervisor/conf.d/acs.conf <<EOF
+    cat > "$SUPERVISOR_CONF_DIR/acs.conf" <<EOF
 [program:acs-queue-worker]
 process_name=%(program_name)s_%(process_num)02d
 command=php $APP_DIR/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
@@ -774,19 +930,29 @@ user=$APP_USER
 redirect_stderr=true
 stdout_logfile=/var/log/supervisor/acs-horizon.log
 stopwaitsecs=3600
+
+[program:acs-reverb]
+process_name=%(program_name)s
+command=php $APP_DIR/artisan reverb:start --host=0.0.0.0 --port=8080
+autostart=true
+autorestart=true
+user=$APP_USER
+redirect_stderr=true
+stdout_logfile=/var/log/supervisor/acs-reverb.log
+stopwaitsecs=10
 EOF
     
     # Abilita e avvia Supervisor service PRIMA di usare supervisorctl
-    systemctl enable supervisor
-    systemctl restart supervisor
+    systemctl enable $SUPERVISOR_SERVICE 2>/dev/null || systemctl enable supervisor 2>/dev/null || true
+    systemctl restart $SUPERVISOR_SERVICE 2>/dev/null || systemctl restart supervisor 2>/dev/null || true
     
     # Attendi che Supervisor sia pronto
-    sleep 2
+    sleep 3
     
     # Ricarica configurazione
-    supervisorctl reread || print_warning "supervisorctl reread fallito, riprovo..."
-    supervisorctl update || print_warning "supervisorctl update fallito"
-    supervisorctl start all || print_warning "Alcuni processi potrebbero non essere avviati"
+    supervisorctl reread 2>/dev/null || print_warning "supervisorctl reread fallito"
+    supervisorctl update 2>/dev/null || print_warning "supervisorctl update fallito"
+    supervisorctl start all 2>/dev/null || print_warning "Alcuni processi potrebbero non essere avviati"
     
     print_success "Supervisor configurato"
 }
@@ -849,30 +1015,32 @@ EOF
 }
 
 setup_systemd_service() {
-    print_info "Creazione servizio systemd per ACS..."
+    print_info "Verifica servizi PHP-FPM e Nginx..."
     
-    cat > /etc/systemd/system/acs-server.service <<EOF
-[Unit]
-Description=ACS Laravel Application Server
-After=network.target postgresql.service redis.service
-
-[Service]
-Type=simple
-User=$APP_USER
-WorkingDirectory=$APP_DIR
-ExecStart=/usr/bin/php $APP_DIR/artisan serve --host=0.0.0.0 --port=$APP_PORT
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-EOF
+    # In produzione l'applicazione viene servita da Nginx + PHP-FPM
+    # NON usiamo artisan serve che è solo per sviluppo
     
-    systemctl daemon-reload
-    systemctl enable acs-server
-    systemctl start acs-server
+    # Determina il nome del servizio PHP-FPM
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ] || [ "$OS" = "rocky" ] || [ "$OS" = "almalinux" ]; then
+        PHP_FPM_SERVICE="php-fpm"
+    else
+        PHP_FPM_SERVICE="php${PHP_VERSION}-fpm"
+    fi
     
-    print_success "Servizio systemd creato e avviato"
+    # Abilita e avvia PHP-FPM
+    systemctl enable $PHP_FPM_SERVICE 2>/dev/null || true
+    systemctl restart $PHP_FPM_SERVICE 2>/dev/null || true
+    
+    # Verifica che i servizi siano attivi
+    if systemctl is-active --quiet nginx && systemctl is-active --quiet $PHP_FPM_SERVICE; then
+        print_success "Nginx e PHP-FPM attivi e funzionanti"
+    else
+        print_warning "Verifica manuale dei servizi consigliata"
+        systemctl status nginx --no-pager || true
+        systemctl status $PHP_FPM_SERVICE --no-pager || true
+    fi
+    
+    print_success "Configurazione servizi completata"
 }
 
 setup_firewall() {
@@ -971,6 +1139,17 @@ display_summary() {
         PROTOCOL="https"
     fi
     
+    # Determina i nomi dei servizi in base al sistema operativo
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ] || [ "$OS" = "rocky" ] || [ "$OS" = "almalinux" ]; then
+        PHP_FPM_SERVICE="php-fpm"
+        SUPERVISOR_SERVICE="supervisord"
+        PG_SERVICE_NAME="postgresql-${POSTGRES_VERSION}"
+    else
+        PHP_FPM_SERVICE="php${PHP_VERSION}-fpm"
+        SUPERVISOR_SERVICE="supervisor"
+        PG_SERVICE_NAME="postgresql"
+    fi
+    
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     print_success "Installazione completata con successo!"
@@ -993,10 +1172,10 @@ display_summary() {
     echo "  • Credenziali salvate in: /root/.acs_db_credentials"
     echo ""
     echo -e "${BLUE}Servizi Attivi:${NC}"
-    echo "  • ACS Server: systemctl status acs-server"
-    echo "  • Queue Workers: systemctl status supervisor"
+    echo "  • PHP-FPM: systemctl status $PHP_FPM_SERVICE"
     echo "  • Nginx: systemctl status nginx"
-    echo "  • PostgreSQL: systemctl status postgresql"
+    echo "  • Queue Workers: systemctl status $SUPERVISOR_SERVICE"
+    echo "  • PostgreSQL: systemctl status $PG_SERVICE_NAME"
     echo "  • Redis: systemctl status redis"
     echo "  • Prosody XMPP: systemctl status prosody"
     echo ""
@@ -1005,9 +1184,10 @@ display_summary() {
     echo "  • Nginx Access: /var/log/nginx/acs-access.log"
     echo "  • Nginx Error: /var/log/nginx/acs-error.log"
     echo "  • Queue Workers: /var/log/supervisor/acs-queue.log"
+    echo "  • WebSocket: /var/log/supervisor/acs-reverb.log"
     echo ""
     echo -e "${BLUE}Comandi Utili:${NC}"
-    echo "  • Restart ACS: systemctl restart acs-server"
+    echo "  • Restart servizi: systemctl restart nginx $PHP_FPM_SERVICE"
     echo "  • Clear cache: cd $APP_DIR && php artisan cache:clear"
     echo "  • View logs: tail -f $APP_DIR/storage/logs/laravel.log"
     echo "  • Restart queues: supervisorctl restart all"
@@ -1052,8 +1232,11 @@ main() {
     
     # Installazione dipendenze OS-specific
     case $OS in
-        ubuntu|debian)
+        ubuntu)
             install_dependencies_ubuntu
+            ;;
+        debian)
+            install_dependencies_debian
             ;;
         centos|rhel|rocky|almalinux)
             install_dependencies_centos
