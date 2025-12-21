@@ -680,6 +680,44 @@ EOF
 configure_supervisor() {
     print_info "Configurazione Supervisor..."
     
+    # Crea directory log
+    mkdir -p /var/log/supervisor
+    
+    # Assicurati che la configurazione principale di Supervisor sia corretta
+    # Su alcuni sistemi la configurazione base potrebbe mancare delle sezioni necessarie
+    if [ ! -f /etc/supervisor/supervisord.conf ]; then
+        cat > /etc/supervisor/supervisord.conf <<MAINCONF
+[unix_http_server]
+file=/var/run/supervisor.sock
+chmod=0700
+
+[supervisord]
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+childlogdir=/var/log/supervisor
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor.sock
+
+[include]
+files = /etc/supervisor/conf.d/*.conf
+MAINCONF
+    fi
+    
+    # Verifica che [supervisorctl] sia presente nel file principale
+    if ! grep -q "\[supervisorctl\]" /etc/supervisor/supervisord.conf 2>/dev/null; then
+        print_warning "Aggiunta sezione [supervisorctl] alla configurazione..."
+        cat >> /etc/supervisor/supervisord.conf <<ADDCONF
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor.sock
+ADDCONF
+    fi
+    
+    # Configurazione programmi ACS
     cat > /etc/supervisor/conf.d/acs.conf <<EOF
 [program:acs-queue-worker]
 process_name=%(program_name)s_%(process_num)02d
@@ -705,13 +743,17 @@ stdout_logfile=/var/log/supervisor/acs-horizon.log
 stopwaitsecs=3600
 EOF
     
-    # Crea directory log
-    mkdir -p /var/log/supervisor
+    # Abilita e avvia Supervisor service PRIMA di usare supervisorctl
+    systemctl enable supervisor
+    systemctl restart supervisor
+    
+    # Attendi che Supervisor sia pronto
+    sleep 2
     
     # Ricarica configurazione
-    supervisorctl reread
-    supervisorctl update
-    supervisorctl start all
+    supervisorctl reread || print_warning "supervisorctl reread fallito, riprovo..."
+    supervisorctl update || print_warning "supervisorctl update fallito"
+    supervisorctl start all || print_warning "Alcuni processi potrebbero non essere avviati"
     
     print_success "Supervisor configurato"
 }
