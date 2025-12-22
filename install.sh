@@ -770,6 +770,18 @@ USP_WEBSOCKET_TIMEOUT=90
 # Trusted Proxies (Load Balancer / Reverse Proxy)
 # Supports: single IP, CIDR ranges, or * for all proxies
 TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+
+# Rate Limiting (requests per minute)
+RATE_LIMIT_API=60
+RATE_LIMIT_TR069=300
+RATE_LIMIT_LOGIN=5
+RATE_LIMIT_MOBILE=120
+RATE_LIMIT_WEBSOCKET=60
+RATE_LIMIT_BULK=10
+
+# Rate Limit Security (auto-ban after violations)
+RATE_LIMIT_MAX_VIOLATIONS=3
+RATE_LIMIT_BAN_DURATION=60
 EOF
     
     chown $APP_USER:$APP_USER .env

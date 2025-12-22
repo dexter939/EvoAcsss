@@ -12,23 +12,45 @@ use App\Models\IpBlacklist;
 
 class RateLimitMiddleware
 {
-    protected $limits = [
-        'api' => [
-            'requests' => 60,
-            'decay' => 1,
-        ],
-        'tr069' => [
-            'requests' => 300,
-            'decay' => 1,
-        ],
-        'login' => [
-            'requests' => 5,
-            'decay' => 15,
-        ],
-    ];
+    protected function getLimits(): array
+    {
+        return [
+            'api' => [
+                'requests' => (int) config('acs.rate_limits.api', 60),
+                'decay' => 1,
+            ],
+            'tr069' => [
+                'requests' => (int) config('acs.rate_limits.tr069', 300),
+                'decay' => 1,
+            ],
+            'login' => [
+                'requests' => (int) config('acs.rate_limits.login', 5),
+                'decay' => 15,
+            ],
+            'mobile' => [
+                'requests' => (int) config('acs.rate_limits.mobile', 120),
+                'decay' => 1,
+            ],
+            'websocket' => [
+                'requests' => (int) config('acs.rate_limits.websocket', 60),
+                'decay' => 1,
+            ],
+            'bulk' => [
+                'requests' => (int) config('acs.rate_limits.bulk', 10),
+                'decay' => 1,
+            ],
+        ];
+    }
 
-    protected $maxViolations = 3;
-    protected $banDuration = 60;
+    protected function getMaxViolations(): int
+    {
+        return (int) config('acs.rate_limit_security.max_violations', 3);
+    }
+
+    protected function getBanDuration(): int
+    {
+        return (int) config('acs.rate_limit_security.ban_duration_minutes', 60);
+    }
 
     public function handle(Request $request, Closure $next, string $limiter = 'api'): Response
     {
@@ -51,7 +73,8 @@ class RateLimitMiddleware
             ], 403);
         }
 
-        $limits = $this->limits[$limiter] ?? $this->limits['api'];
+        $allLimits = $this->getLimits();
+        $limits = $allLimits[$limiter] ?? $allLimits['api'];
         $key = $this->resolveRequestSignature($request, $limiter);
 
         if (RateLimiter::tooManyAttempts($key, $limits['requests'])) {
@@ -89,11 +112,11 @@ class RateLimitMiddleware
 
         SecurityLog::logRateLimitViolation($ip, $request->path());
 
-        if ($violations >= $this->maxViolations) {
+        if ($violations >= $this->getMaxViolations()) {
             IpBlacklist::blockIp(
                 $ip,
                 "Exceeded rate limit {$violations} times",
-                $this->banDuration,
+                $this->getBanDuration(),
                 [
                     'limiter' => $limiter,
                     'endpoint' => $request->path(),

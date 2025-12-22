@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'device.access' => \App\Http\Middleware\EnsureDeviceAccess::class,
             'audit' => \App\Http\Middleware\RecordAuditLog::class,
             'api.auth' => \App\Http\Middleware\ApiAuth::class,
+            'rate.limit' => \App\Http\Middleware\RateLimitMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
