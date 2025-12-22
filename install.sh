@@ -371,6 +371,10 @@ install_dependencies_ubuntu() {
     print_info "Installazione Prosody XMPP Server..."
     apt-get install -y prosody lua-dbi-postgresql
     
+    # Mosquitto MQTT Broker con SSL
+    print_info "Installazione Mosquitto MQTT Broker..."
+    apt-get install -y mosquitto mosquitto-clients
+    
     # Salva percorso socket PHP-FPM per Nginx
     PHP_FPM_SOCKET="/var/run/php/php${PHP_VERSION}-fpm.sock"
     
@@ -442,6 +446,10 @@ install_dependencies_debian() {
     # Prosody XMPP Server
     print_info "Installazione Prosody XMPP Server..."
     apt-get install -y prosody lua-dbi-postgresql
+    
+    # Mosquitto MQTT Broker con SSL
+    print_info "Installazione Mosquitto MQTT Broker..."
+    apt-get install -y mosquitto mosquitto-clients
     
     # Salva percorso socket PHP-FPM per Nginx
     PHP_FPM_SOCKET="/var/run/php/php${PHP_VERSION}-fpm.sock"
@@ -739,6 +747,15 @@ TR069_CONNECTION_REQUEST_PORT=7547
 USP_ENDPOINT_ID=acs::controller
 USP_XMPP_SERVER=localhost
 USP_XMPP_PORT=5222
+
+# MQTT Configuration (TR-369 USP MQTT Transport)
+MQTT_HOST=127.0.0.1
+MQTT_PORT=1883
+MQTT_TLS_PORT=8883
+MQTT_TLS_ENABLED=true
+MQTT_TLS_CERT=/etc/mosquitto/certs/server.crt
+MQTT_TLS_KEY=/etc/mosquitto/certs/server.key
+MQTT_TLS_CA=/etc/mosquitto/certs/ca.crt
 EOF
     
     chown $APP_USER:$APP_USER .env
@@ -1023,6 +1040,75 @@ EOF
     print_success "Prosody configurato"
 }
 
+configure_mosquitto() {
+    print_info "Configurazione Mosquitto MQTT Broker con SSL/TLS..."
+    
+    # Crea directory per certificati
+    mkdir -p /etc/mosquitto/certs
+    
+    # Genera certificati self-signed se non esistono e SSL non è abilitato con Let's Encrypt
+    if [ ! -f /etc/mosquitto/certs/ca.crt ]; then
+        print_info "Generazione certificati SSL self-signed per MQTT..."
+        
+        # Genera CA
+        openssl genrsa -out /etc/mosquitto/certs/ca.key 2048
+        openssl req -new -x509 -days 3650 -key /etc/mosquitto/certs/ca.key \
+            -out /etc/mosquitto/certs/ca.crt -subj "/CN=ACS MQTT CA/O=ACS/C=IT"
+        
+        # Genera certificato server
+        openssl genrsa -out /etc/mosquitto/certs/server.key 2048
+        openssl req -new -key /etc/mosquitto/certs/server.key \
+            -out /etc/mosquitto/certs/server.csr -subj "/CN=$DOMAIN/O=ACS/C=IT"
+        openssl x509 -req -in /etc/mosquitto/certs/server.csr -CA /etc/mosquitto/certs/ca.crt \
+            -CAkey /etc/mosquitto/certs/ca.key -CAcreateserial -out /etc/mosquitto/certs/server.crt -days 3650
+        
+        # Imposta permessi
+        chown -R mosquitto:mosquitto /etc/mosquitto/certs
+        chmod 600 /etc/mosquitto/certs/*.key
+        chmod 644 /etc/mosquitto/certs/*.crt
+    fi
+    
+    # Configurazione Mosquitto con SSL
+    cat > /etc/mosquitto/conf.d/acs.conf <<EOF
+# ACS MQTT Configuration for TR-369 USP Transport
+# Porta standard MQTT (non cifrata)
+listener 1883 127.0.0.1
+allow_anonymous true
+
+# Porta MQTT SSL/TLS (cifrata)
+listener 8883
+cafile /etc/mosquitto/certs/ca.crt
+certfile /etc/mosquitto/certs/server.crt
+keyfile /etc/mosquitto/certs/server.key
+require_certificate false
+tls_version tlsv1.2
+
+# Logging
+log_dest file /var/log/mosquitto/mosquitto.log
+log_type error
+log_type warning
+log_type notice
+log_type information
+
+# Persistence
+persistence true
+persistence_location /var/lib/mosquitto/
+
+# Connection settings
+max_connections -1
+EOF
+    
+    # Crea directory log
+    mkdir -p /var/log/mosquitto
+    chown mosquitto:mosquitto /var/log/mosquitto
+    
+    # Restart Mosquitto
+    systemctl restart mosquitto
+    systemctl enable mosquitto
+    
+    print_success "Mosquitto MQTT configurato con SSL sulla porta 8883"
+}
+
 setup_systemd_service() {
     print_info "Verifica servizi PHP-FPM e Nginx..."
     
@@ -1060,12 +1146,14 @@ setup_firewall() {
         ufw allow 443/tcp
         ufw allow 7547/tcp  # TR-069 Connection Request
         ufw allow 5222/tcp  # XMPP
+        ufw allow 8883/tcp  # MQTT SSL/TLS
         print_success "Firewall UFW configurato"
     elif command -v firewall-cmd &> /dev/null; then
         firewall-cmd --permanent --add-service=http
         firewall-cmd --permanent --add-service=https
         firewall-cmd --permanent --add-port=7547/tcp
         firewall-cmd --permanent --add-port=5222/tcp
+        firewall-cmd --permanent --add-port=8883/tcp
         firewall-cmd --reload
         print_success "Firewall firewalld configurato"
     else
@@ -1268,6 +1356,7 @@ main() {
     configure_nginx
     configure_supervisor
     configure_prosody
+    configure_mosquitto
     setup_systemd_service
     setup_firewall
     setup_cron
