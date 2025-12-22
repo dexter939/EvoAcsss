@@ -685,6 +685,9 @@ configure_environment() {
     # Genera SESSION_SECRET
     SESSION_SECRET=$(openssl rand -base64 32)
     
+    # Genera ACS_API_KEY (chiave API sicura 64 caratteri)
+    ACS_API_KEY=$(openssl rand -hex 32)
+    
     cat > .env <<EOF
 APP_NAME="ACS Server"
 APP_ENV=production
@@ -724,6 +727,9 @@ MAIL_PASSWORD=null
 MAIL_ENCRYPTION=null
 MAIL_FROM_ADDRESS="noreply@acs.local"
 MAIL_FROM_NAME="${APP_NAME}"
+
+# ACS API Security
+ACS_API_KEY=$ACS_API_KEY
 
 # TR-069 Configuration
 TR069_ACS_URL=http://$DOMAIN/acs
