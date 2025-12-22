@@ -30,6 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'audit' => \App\Http\Middleware\RecordAuditLog::class,
             'api.auth' => \App\Http\Middleware\ApiAuth::class,
             'rate.limit' => \App\Http\Middleware\RateLimitMiddleware::class,
+            'tenant.identify' => \App\Http\Middleware\IdentifyTenant::class,
+            'tenant.enforce' => \App\Http\Middleware\EnforceTenantContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
