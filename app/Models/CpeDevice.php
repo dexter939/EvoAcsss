@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Traits\Auditable;
+use App\Traits\HasTenant;
 use App\Models\Scopes\UserDeviceScope;
 
 /**
@@ -37,7 +38,7 @@ use App\Models\Scopes\UserDeviceScope;
  */
 class CpeDevice extends Model
 {
-    use HasFactory, SoftDeletes, Auditable;
+    use HasFactory, SoftDeletes, Auditable, HasTenant;
     
     protected $auditCategory = 'device';
 
@@ -46,6 +47,7 @@ class CpeDevice extends Model
      * Mass assignable fields
      */
     protected $fillable = [
+        'tenant_id',
         'serial_number',
         'protocol_type',
         'usp_endpoint_id',

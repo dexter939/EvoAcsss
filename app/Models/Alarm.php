@@ -6,11 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasTenant;
 
 class Alarm extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTenant;
+
     protected $fillable = [
+        'tenant_id',
         'device_id',
         'alarm_type',
         'severity',
