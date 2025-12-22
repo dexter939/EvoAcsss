@@ -766,6 +766,10 @@ USP_WEBSOCKET_CERT_PATH=/etc/acs/certs/websocket.crt
 USP_WEBSOCKET_KEY_PATH=/etc/acs/certs/websocket.key
 USP_WEBSOCKET_PING_INTERVAL=30
 USP_WEBSOCKET_TIMEOUT=90
+
+# Trusted Proxies (Load Balancer / Reverse Proxy)
+# Supports: single IP, CIDR ranges, or * for all proxies
+TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 EOF
     
     chown $APP_USER:$APP_USER .env
