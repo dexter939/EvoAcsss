@@ -756,6 +756,16 @@ MQTT_TLS_ENABLED=true
 MQTT_TLS_CERT=/etc/mosquitto/certs/server.crt
 MQTT_TLS_KEY=/etc/mosquitto/certs/server.key
 MQTT_TLS_CA=/etc/mosquitto/certs/ca.crt
+
+# USP WebSocket Configuration (TR-369 WebSocket Transport)
+USP_WEBSOCKET_ENABLED=true
+USP_WEBSOCKET_HOST=0.0.0.0
+USP_WEBSOCKET_PORT=9000
+USP_WEBSOCKET_SSL=true
+USP_WEBSOCKET_CERT_PATH=/etc/acs/certs/websocket.crt
+USP_WEBSOCKET_KEY_PATH=/etc/acs/certs/websocket.key
+USP_WEBSOCKET_PING_INTERVAL=30
+USP_WEBSOCKET_TIMEOUT=90
 EOF
     
     chown $APP_USER:$APP_USER .env
@@ -1109,6 +1119,41 @@ EOF
     print_success "Mosquitto MQTT configurato con SSL sulla porta 8883"
 }
 
+configure_websocket_ssl() {
+    print_info "Configurazione WebSocket SSL per USP Transport..."
+    
+    # Crea directory per certificati ACS
+    mkdir -p /etc/acs/certs
+    
+    # Genera certificati self-signed per WebSocket se non esistono
+    if [ ! -f /etc/acs/certs/websocket.crt ]; then
+        print_info "Generazione certificati SSL per WebSocket USP..."
+        
+        # Genera chiave privata
+        openssl genrsa -out /etc/acs/certs/websocket.key 2048
+        
+        # Genera certificato self-signed (10 anni)
+        openssl req -new -x509 -days 3650 \
+            -key /etc/acs/certs/websocket.key \
+            -out /etc/acs/certs/websocket.crt \
+            -subj "/CN=$DOMAIN/O=ACS/OU=USP WebSocket/C=IT"
+        
+        # Se SSL Let's Encrypt è abilitato, usa quei certificati
+        if [ "$ENABLE_SSL" = "true" ] && [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+            print_info "Utilizzo certificati Let's Encrypt per WebSocket..."
+            ln -sf /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/acs/certs/websocket.crt
+            ln -sf /etc/letsencrypt/live/$DOMAIN/privkey.pem /etc/acs/certs/websocket.key
+        fi
+        
+        # Imposta permessi
+        chown -R $APP_USER:$APP_USER /etc/acs/certs
+        chmod 600 /etc/acs/certs/*.key
+        chmod 644 /etc/acs/certs/*.crt
+    fi
+    
+    print_success "WebSocket SSL configurato sulla porta 9000"
+}
+
 setup_systemd_service() {
     print_info "Verifica servizi PHP-FPM e Nginx..."
     
@@ -1147,6 +1192,7 @@ setup_firewall() {
         ufw allow 7547/tcp  # TR-069 Connection Request
         ufw allow 5222/tcp  # XMPP
         ufw allow 8883/tcp  # MQTT SSL/TLS
+        ufw allow 9000/tcp  # USP WebSocket SSL
         print_success "Firewall UFW configurato"
     elif command -v firewall-cmd &> /dev/null; then
         firewall-cmd --permanent --add-service=http
@@ -1154,6 +1200,7 @@ setup_firewall() {
         firewall-cmd --permanent --add-port=7547/tcp
         firewall-cmd --permanent --add-port=5222/tcp
         firewall-cmd --permanent --add-port=8883/tcp
+        firewall-cmd --permanent --add-port=9000/tcp
         firewall-cmd --reload
         print_success "Firewall firewalld configurato"
     else
@@ -1357,6 +1404,7 @@ main() {
     configure_supervisor
     configure_prosody
     configure_mosquitto
+    configure_websocket_ssl
     setup_systemd_service
     setup_firewall
     setup_cron
