@@ -42,8 +42,8 @@ DB_PASSWORD="${DB_PASSWORD:-}"  # Se vuoto, verrà generata automaticamente
 APP_PORT="${APP_PORT:-5000}"
 
 # Repository Git (supporta GitHub e GitLab)
-# Formato: https://gitlab.com/username/repo.git oppure https://github.com/username/repo.git
-REPO_URL="${REPO_URL:-https://gitlab.com/dexter939/EvoACS.git}"
+# Formato: https://github.com/username/repo.git oppure https://gitlab.com/username/repo.git
+REPO_URL="${REPO_URL:-https://github.com/dexter939/EvoAcsss.git}"
 
 # Abilita SSL automatico con Let's Encrypt (true/false)
 ENABLE_SSL="${ENABLE_SSL:-false}"
