@@ -36,7 +36,7 @@ Route::prefix('auth')->middleware('auth:sanctum')->group(function () {
 });
 
 // API v1 routes - now support both API Key AND Sanctum token auth
-Route::prefix('v1')->middleware(['auth:sanctum', 'api.auth'])->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', 'api.auth', 'tenant.identify', 'tenant.enforce'])->group(function () {
     
     // Telemetry & Monitoring APIs
     Route::get('telemetry/current', [TelemetryController::class, 'current']);

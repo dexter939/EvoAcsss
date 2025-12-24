@@ -2,9 +2,9 @@
 
 ## Carrier-Grade ACS Multi-Tenancy Implementation Plan
 
-**Version**: 1.0  
+**Version**: 2.0  
 **Date**: December 2025  
-**Status**: Roadmap / Planning
+**Status**: Phase 0-2 IMPLEMENTED
 
 ---
 
@@ -85,9 +85,11 @@ ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
 ```
 
 ### Deliverables
-- [ ] Database migrations created
-- [ ] Tenant seeder for existing data
-- [ ] Audit of current tenant_id usage
+- [x] Database migrations created (tenants, tenant_credentials tables)
+- [x] Tenant seeder for existing data
+- [x] Audit of current tenant_id usage (cpe_devices, alarms, users)
+
+**Status: IMPLEMENTED (December 2025)**
 
 ---
 
@@ -136,10 +138,12 @@ class TenantContext
 - Log all fallback occurrences for monitoring
 
 ### Deliverables
-- [ ] TenantDiscoveryService implemented
-- [ ] TenantContext singleton
-- [ ] Dual-write enabled on tokens/sessions
+- [x] TenantDiscoveryService implemented (app/Services/TenantDiscoveryService.php)
+- [x] TenantContext singleton (app/Contexts/TenantContext.php)
+- [x] Dual-write enabled on tokens/sessions (HasTenant trait)
 - [ ] Monitoring dashboard for fallback occurrences
+
+**Status: IMPLEMENTED (December 2025)**
 
 ---
 
@@ -233,10 +237,13 @@ return [
 ```
 
 ### Deliverables
-- [ ] All middleware implemented
-- [ ] Global scopes applied to tenant-aware models
-- [ ] Feature flags for gradual rollout
+- [x] All middleware implemented (IdentifyTenant, EnforceTenantContext)
+- [x] Global scopes applied to tenant-aware models (TenantScope, HasTenant trait)
+- [x] Feature flags for gradual rollout (config/tenant.php)
+- [x] Middleware applied to ACS web routes and API v1 routes
 - [ ] Integration tests passing
+
+**Status: IMPLEMENTED (December 2025)**
 
 ---
 

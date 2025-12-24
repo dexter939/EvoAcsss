@@ -15,6 +15,10 @@ class TenantScope implements Scope
             return;
         }
 
+        if (!config('tenant.enforce_isolation', false)) {
+            return;
+        }
+
         if (TenantContext::check()) {
             $table = $model->getTable();
             $builder->where("{$table}.tenant_id", TenantContext::id());

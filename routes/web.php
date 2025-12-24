@@ -48,7 +48,7 @@ Route::match(['get', 'post'], '/usp', [UspController::class, 'handleUspMessage']
 Route::post('/tr369/mqtt/publish', [UspController::class, 'handleMqttPublish'])->name('usp.mqtt.publish');
 
 // ACS Web Dashboard (Protected Routes)
-Route::prefix('acs')->name('acs.')->middleware('auth')->group(function () {
+Route::prefix('acs')->name('acs.')->middleware(['auth', 'tenant.identify', 'tenant.enforce'])->group(function () {
     Route::get('/dashboard', [AcsController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard/stats-api', [AcsController::class, 'dashboardStatsApi'])->name('dashboard.stats');
     
