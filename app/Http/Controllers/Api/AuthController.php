@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Services\TenantAwareTokenService;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -16,6 +17,10 @@ use Illuminate\Validation\ValidationException;
  */
 class AuthController extends Controller
 {
+    public function __construct(
+        protected TenantAwareTokenService $tokenService
+    ) {}
+
     /**
      * Login user and generate API token
      * 
@@ -37,19 +42,18 @@ class AuthController extends Controller
             ]);
         }
 
-        // Delete old tokens for this user (optional - keeps only latest token)
         $user->tokens()->delete();
 
-        // Create new API token
-        $token = $user->createToken('mobile-app')->plainTextToken;
+        $newToken = $this->tokenService->createToken($user, 'mobile-app');
 
         return response()->json([
-            'token' => $token,
+            'token' => $newToken->plainTextToken,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
+                'tenant_id' => $user->tenant_id,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
             ],
@@ -96,14 +100,13 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Delete old tokens
         $user->tokens()->delete();
 
-        // Create new token
-        $token = $user->createToken('mobile-app')->plainTextToken;
+        $newToken = $this->tokenService->createToken($user, 'mobile-app');
 
         return response()->json([
-            'token' => $token,
+            'token' => $newToken->plainTextToken,
+            'tenant_id' => $user->tenant_id,
             'message' => 'Token refreshed'
         ], 200);
     }

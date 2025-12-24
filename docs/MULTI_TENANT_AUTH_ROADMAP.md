@@ -326,12 +326,18 @@ Broadcast::channel('tenant.{tenantId}.devices.{deviceId}', function (User $user,
 ```
 
 ### Deliverables
-- [ ] Token scoping enforced
+- [x] Token scoping enforced (TenantAwareTokenService, ValidateTokenTenant middleware)
 - [ ] Session isolation complete
 - [ ] Cache namespacing active
 - [ ] Queue tenant tags working
 - [ ] WebSocket channels tenant-aware
 - [ ] Legacy fallback paths removed
+
+**Token Scoping Status: IMPLEMENTED (December 2025)**
+- AuthController uses TenantAwareTokenService for login/refresh
+- ValidateTokenTenant middleware validates token-tenant alignment
+- Cross-tenant token access logged as critical security events
+- Token-user tenant mismatch detection and logging
 
 ---
 

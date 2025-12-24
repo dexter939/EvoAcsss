@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'rate.limit' => \App\Http\Middleware\RateLimitMiddleware::class,
             'tenant.identify' => \App\Http\Middleware\IdentifyTenant::class,
             'tenant.enforce' => \App\Http\Middleware\EnforceTenantContext::class,
+            'tenant.token' => \App\Http\Middleware\ValidateTokenTenant::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
