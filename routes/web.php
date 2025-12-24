@@ -12,6 +12,7 @@ use App\Http\Controllers\Acs\VendorLibraryWebController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AlarmsController;
 use App\Http\Controllers\DeviceAccessController;
+use App\Http\Controllers\SettingsController;
 
 require __DIR__.'/auth.php';
 
@@ -239,6 +240,11 @@ Route::prefix('acs')->name('acs.')->middleware('auth')->group(function () {
     Route::get('/data-models/{id}/parameters', [DataModelController::class, 'showParameters'])->name('data-models.parameters');
     
     // Multi-tenant Customers & Services
+    // Settings
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::post('/settings/clear-cache', [SettingsController::class, 'clearCache'])->name('settings.clear-cache');
+    
     Route::get('/customers', [AcsController::class, 'customers'])->name('customers');
     Route::get('/customers/{customerId}', [AcsController::class, 'customerDetail'])->name('customers.detail');
     Route::post('/customers', [AcsController::class, 'storeCustomer'])->name('customers.store');

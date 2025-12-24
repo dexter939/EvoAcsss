@@ -281,6 +281,15 @@
                     <span class="nav-link-text ms-1">Users & Roles</span>
                 </a>
             </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ Request::is('acs/settings*') ? 'active' : '' }}" href="{{ route('acs.settings') }}">
+                    <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-cog text-primary text-sm opacity-60"></i>
+                    </div>
+                    <span class="nav-link-text ms-1">Impostazioni</span>
+                </a>
+            </li>
         </ul>
     </div>
     
