@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Contexts\TenantContext;
 use App\Services\TenantAwareTokenService;
+use App\Services\TenantAnomalyDetector;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +16,8 @@ use Laravel\Sanctum\PersonalAccessToken;
 class ValidateTokenTenant
 {
     public function __construct(
-        protected TenantAwareTokenService $tokenService
+        protected TenantAwareTokenService $tokenService,
+        protected TenantAnomalyDetector $anomalyDetector
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -38,6 +40,8 @@ class ValidateTokenTenant
         if (!$token instanceof PersonalAccessToken) {
             return $next($request);
         }
+
+        $this->anomalyDetector->checkTokenAnomaly($token, $request);
 
         $tokenTenantId = $this->getTokenTenantId($token->id);
         $contextTenantId = TenantContext::id();

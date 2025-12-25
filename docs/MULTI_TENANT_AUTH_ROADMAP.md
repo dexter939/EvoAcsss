@@ -459,12 +459,21 @@ AuditLog::create([
 ```
 
 ### Deliverables
-- [ ] mTLS configuration documented
-- [ ] Secret rotation automated
-- [ ] Anomaly detection active
-- [ ] WAF rules documented
-- [ ] Audit logging complete
+- [x] mTLS configuration documented (docs/SECURITY_HARDENING.md)
+- [x] Secret rotation automated (RotateTenantSecrets command, weekly schedule)
+- [x] Anomaly detection active (TenantAnomalyDetector service)
+- [x] WAF rules documented (docs/SECURITY_HARDENING.md)
+- [x] Audit logging complete (security_alerts table, SecurityAlertService)
 - [ ] BBF.369 compliance verified
+
+**Security Hardening Status: IMPLEMENTED (December 2025)**
+- RotateTenantSecrets command with grace period support
+- Weekly scheduled rotation (Sundays 4:00 AM)
+- TenantAnomalyDetector service for real-time threat detection
+- SecurityAlertService for multi-channel alerting (log, database, email, webhook)
+- security_alerts table for persistent alert storage
+- Integration with ValidateTokenTenant middleware
+- Comprehensive documentation in docs/SECURITY_HARDENING.md
 
 ---
 

@@ -39,6 +39,15 @@ class TenantCredential extends Model
         return $this->expires_at && $this->expires_at->isPast();
     }
 
+    public function isExpiringSoon(int $days = 30): bool
+    {
+        if (!$this->expires_at) {
+            return false;
+        }
+
+        return $this->expires_at->isBetween(now(), now()->addDays($days));
+    }
+
     public function isValid(): bool
     {
         return $this->is_active && !$this->isExpired();

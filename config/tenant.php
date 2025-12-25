@@ -77,6 +77,17 @@ return [
     'security' => [
         'log_cross_tenant_attempts' => env('TENANT_LOG_CROSS_TENANT', true),
         'secret_rotation_days' => env('TENANT_SECRET_ROTATION_DAYS', 90),
+        'secret_grace_hours' => env('TENANT_SECRET_GRACE_HOURS', 24),
         'anomaly_detection' => env('TENANT_ANOMALY_DETECTION', true),
+        'alert_on_anomaly' => env('TENANT_ALERT_ON_ANOMALY', true),
+        'alert_channels' => explode(',', env('TENANT_ALERT_CHANNELS', 'log,database')),
+        'alert_emails' => array_filter(explode(',', env('TENANT_ALERT_EMAILS', ''))),
+        'webhook_url' => env('TENANT_SECURITY_WEBHOOK_URL'),
+        'webhook_secret' => env('TENANT_SECURITY_WEBHOOK_SECRET'),
+        'failed_auth_threshold' => env('TENANT_FAILED_AUTH_THRESHOLD', 5),
+        'rate_limit_threshold' => env('TENANT_RATE_LIMIT_THRESHOLD', 10),
+        'cross_tenant_threshold' => env('TENANT_CROSS_TENANT_THRESHOLD', 1),
+        'unusual_ip_threshold' => env('TENANT_UNUSUAL_IP_THRESHOLD', 10),
+        'detection_window' => env('TENANT_DETECTION_WINDOW_MINUTES', 15),
     ],
 ];

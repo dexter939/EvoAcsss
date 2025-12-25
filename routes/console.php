@@ -28,3 +28,11 @@ Schedule::command('stomp:poll-broker')
 Schedule::command('stomp:prune-metrics')
     ->dailyAt('02:00')
     ->withoutOverlapping();
+
+// Tenant secret rotation (weekly on Sundays at 4:00 AM)
+Schedule::command('tenant:rotate-secrets')
+    ->weekly()
+    ->sundays()
+    ->at('04:00')
+    ->withoutOverlapping()
+    ->onOneServer();
