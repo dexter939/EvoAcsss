@@ -12,13 +12,31 @@ This guide explains how to integrate Laravel Reverb WebSocket into the React Nat
 - **Driver**: Reverb (configured in `.env`)
 - **Broadcasting**: Enabled with ShouldBroadcast events
 
-### 2. Broadcasting Channels (COMPLETED)
+### 2. Broadcasting Channels (COMPLETED - December 2025)
 Private channels configured in `routes/channels.php` with **carrier-grade multi-tenant isolation**:
 
 ```php
-// User-specific alarms channel (TENANT-SCOPED)
-// SECURITY: Only broadcast to users with explicit device access via user_devices pivot
-// Alarms without device association are NOT broadcast (logged only for security)
+// Tenant-wide alarms channel (NEW - December 2025)
+// All users within a tenant receive broadcasts
+Broadcast::channel('tenant.{tenantId}', function ($user, $tenantId) {
+    if ($user->isSuperAdmin()) return true;
+    return $user->tenant_id === (int) $tenantId;
+});
+
+// Tenant-wide presence channel (shows online users)
+Broadcast::channel('tenant.{tenantId}.presence', function ($user, $tenantId) {
+    if ($user->tenant_id === (int) $tenantId) {
+        return ['id' => $user->id, 'name' => $user->name, 'email' => $user->email];
+    }
+    return false;
+});
+
+// Tenant severity-filtered channel
+Broadcast::channel('tenant.{tenantId}.alarms.{severity}', function ($user, $tenantId, $severity) {
+    return $user->tenant_id === (int) $tenantId;
+});
+
+// User-specific alarms channel (backward compatible)
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });
@@ -29,31 +47,29 @@ Broadcast::channel('device.{deviceSerial}', function ($user, $deviceSerial) {
     $device = CpeDevice::where('serial_number', $deviceSerial)->first();
     return $device && $user->canAccessDevice($device);
 });
-
-// Department-specific
-Broadcast::channel('department.{department}', function ($user, $department) {
-    return $user->department === $department || $user->isSuperAdmin();
-});
 ```
 
 **Multi-Tenant Security - Production-Safe Implementation**:
-1. ✅ **Zero Global Channels**: No global `alarms` channel exists to prevent cross-tenant leakage
-2. ✅ **Explicit Device Access**: Backend broadcasts ONLY to users with device access via `user_devices` pivot
-3. ✅ **User-Scoped Channels**: Each alarm broadcasts to authorized user's private `user.{userId}` channel
-4. ✅ **No Fallback Leakage**: Alarms without device association are NOT broadcast (logged only)
-5. ✅ **Backward Compatible**: Payload includes both legacy `message` and new `title`/`description` fields
-6. **Result**: Carrier-grade multi-tenant isolation with zero cross-tenant data exposure
+1. ✅ **Tenant Channels**: Broadcast to all users in tenant via `tenant.{tenantId}` channel
+2. ✅ **Severity Filtering**: Subscribe to specific severity via `tenant.{tenantId}.alarms.{severity}`
+3. ✅ **Presence Tracking**: See online users via `tenant.{tenantId}.presence` channel
+4. ✅ **User-Scoped Fallback**: Backward compatible `user.{userId}` channels still work
+5. ✅ **Zero Cross-Tenant Leakage**: Strict tenant_id validation on all channels
+6. **Result**: Carrier-grade multi-tenant isolation with flexible subscription options
 
-### 3. Broadcast Events (COMPLETED)
+### 3. Broadcast Events (UPDATED - December 2025)
 - **AlarmCreated**: Dispatched when new alarm is raised (already integrated in `AlarmService`)
-- **Event Channels**: `user.{userId}` (tenant-scoped, NO global channels)
+- **Event Channels** (multi-tier):
+  - `tenant.{tenantId}` - All users in tenant receive alarms
+  - `tenant.{tenantId}.alarms.{severity}` - Severity-filtered subscription
+  - `user.{userId}` - Backward compatible user-specific channel
 - **Event Name**: `alarm.created`
-- **Multi-Tenant Isolation**: Broadcasts ONLY to users with explicit `user_devices` access
-- **No-Device Handling**: Alarms without device association are logged but NOT broadcast
+- **Multi-Tenant Isolation**: Broadcasts to tenant channel + user channels for complete coverage
 - **Payload** (backward compatible):
   ```json
   {
     "id": 123,
+    "tenant_id": 1,
     "device_id": 456,
     "device_serial": "SN123456",
     "severity": "critical",
@@ -68,7 +84,7 @@ Broadcast::channel('department.{department}', function ($user, $department) {
   }
   ```
   
-**Note**: Both `message` (legacy) and `title`/`description` (new) are included for backward compatibility.
+**Note**: `tenant_id` added to payload. Both `message` (legacy) and `title`/`description` (new) included for backward compatibility.
 
 ## Mobile App Integration (React Native)
 
