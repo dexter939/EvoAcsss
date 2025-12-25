@@ -59,7 +59,7 @@ The web interface utilizes the **Soft UI Dashboard Pro Laravel** template for a 
   - **Phase 3 (IMPLEMENTED - November 2025)**: Backend WebSocket infrastructure with Laravel Reverb, secure multi-tenant alarm broadcasting, complete mobile integration guide with code examples for WebSocket client setup, offline sync with AsyncStorage, advanced filtering UI, and bulk operations interface. See `docs/WEBSOCKET_MOBILE_INTEGRATION.md` for implementation details.
 
 # External Dependencies
-- **PostgreSQL 16+**: Primary relational database.
+- **PostgreSQL 16+**: Primary relational database. **Read Replica Support (December 2025)**: Production-grade read/write splitting with up to 3 read replicas, sticky sessions, SSL/TLS support, cloud-managed database compatibility (AWS RDS, GCP Cloud SQL, Azure, Neon). See `docs/DATABASE_REPLICATION_GUIDE.md`.
 - **Redis 7+**: Queue driver for Laravel Horizon, WebSocket message routing, and Prometheus metrics storage. **Cluster Support (December 2025)**: Production-grade Redis Cluster (6-node) and Sentinel configuration for high availability, TLS encryption support, separate databases for cache/session/queue/broadcast isolation. See `docs/REDIS_CLUSTER_GUIDE.md`.
 - **Laravel Reverb v1.6.0**: Built-in WebSocket server for real-time broadcasting (NEW - November 2025).
 - **Laravel Horizon**: Manages Redis queues.

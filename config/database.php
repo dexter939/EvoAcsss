@@ -83,7 +83,33 @@ return [
             ]) : [],
         ],
 
-        'pgsql' => [
+        'pgsql' => env('DB_READ_REPLICA_ENABLED', false) ? [
+            'driver' => 'pgsql',
+            'read' => [
+                'host' => array_filter([
+                    env('DB_READ_HOST_1'),
+                    env('DB_READ_HOST_2'),
+                    env('DB_READ_HOST_3'),
+                ]),
+                'port' => env('DB_READ_PORT', env('DB_PORT') ?: env('PGPORT', '5432')),
+            ],
+            'write' => [
+                'host' => env('DB_HOST') ?: env('PGHOST', '127.0.0.1'),
+                'port' => env('DB_PORT') ?: env('PGPORT', '5432'),
+            ],
+            'sticky' => env('DB_STICKY', true),
+            'database' => env('DB_DATABASE') ?: env('PGDATABASE', 'laravel'),
+            'username' => env('DB_USERNAME') ?: env('PGUSER', 'root'),
+            'password' => env('DB_PASSWORD') ?: env('PGPASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'options' => env('DB_SSLMODE', 'prefer') === 'require' ? [
+                PDO::ATTR_TIMEOUT => env('DB_TIMEOUT', 5),
+            ] : [],
+        ] : [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
             'host' => env('DB_HOST') ?: env('PGHOST', '127.0.0.1'),
@@ -95,7 +121,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
         'sqlsrv' => [
