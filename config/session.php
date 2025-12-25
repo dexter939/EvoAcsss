@@ -13,8 +13,10 @@ return [
     | incoming requests. Laravel supports a variety of storage options to
     | persist session data. Database storage is a great default choice.
     |
-    | Supported: "file", "cookie", "database", "memcached",
+    | Supported: "file", "cookie", "database", "tenant_database", "memcached",
     |            "redis", "dynamodb", "array"
+    |
+    | Note: Use "tenant_database" for multi-tenant session isolation
     |
     */
 
