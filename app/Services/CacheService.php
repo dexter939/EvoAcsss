@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contexts\TenantContext;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Redis;
  * 
  * Ottimizza performance per gestione carrier-grade di 100,000+ dispositivi CPE
  * Optimizes performance for carrier-grade management of 100,000+ CPE devices
+ * 
+ * Multi-Tenant: Automatically namespaces cache keys by tenant when enabled
  */
 class CacheService
 {
@@ -26,6 +29,32 @@ class CacheService
     const TTL_STATISTICS = 300;            // 5 minuti - Dashboard statistics
     const TTL_TOPOLOGY = 180;              // 3 minuti - Network topology
     const TTL_SESSION = 120;               // 2 minuti - Active sessions
+
+    /**
+     * Get tenant-aware cache key prefix
+     */
+    protected function getTenantPrefix(): string
+    {
+        if (!config('tenant.enabled', false)) {
+            return '';
+        }
+
+        $tenantId = TenantContext::id();
+        
+        if ($tenantId === null) {
+            return '';
+        }
+
+        return "tenant:{$tenantId}:";
+    }
+
+    /**
+     * Apply tenant prefix to cache key
+     */
+    protected function tenantKey(string $key): string
+    {
+        return $this->getTenantPrefix() . $key;
+    }
     
     /**
      * Recupera device data con caching
@@ -36,7 +65,7 @@ class CacheService
      */
     public function getDeviceData($deviceId)
     {
-        return Cache::remember("device:{$deviceId}:data", self::TTL_DEVICE_DATA, function () use ($deviceId) {
+        return Cache::remember($this->tenantKey("device:{$deviceId}:data"), self::TTL_DEVICE_DATA, function () use ($deviceId) {
             return \App\Models\CpeDevice::with(['configurationProfile', 'service'])
                 ->find($deviceId);
         });
@@ -51,7 +80,7 @@ class CacheService
      */
     public function getDeviceParameters($deviceId)
     {
-        return Cache::remember("device:{$deviceId}:parameters", self::TTL_DEVICE_PARAMETERS, function () use ($deviceId) {
+        return Cache::remember($this->tenantKey("device:{$deviceId}:parameters"), self::TTL_DEVICE_PARAMETERS, function () use ($deviceId) {
             return \App\Models\DeviceParameter::where('device_id', $deviceId)
                 ->orderBy('parameter_name')
                 ->get();
@@ -67,7 +96,7 @@ class CacheService
      */
     public function getDeviceStatus($deviceId)
     {
-        return Cache::remember("device:{$deviceId}:status", self::TTL_DEVICE_STATUS, function () use ($deviceId) {
+        return Cache::remember($this->tenantKey("device:{$deviceId}:status"), self::TTL_DEVICE_STATUS, function () use ($deviceId) {
             $device = \App\Models\CpeDevice::select('status', 'last_inform', 'last_contact')
                 ->find($deviceId);
             
@@ -87,7 +116,7 @@ class CacheService
      */
     public function getOnlineDevices()
     {
-        return Cache::remember('devices:online', self::TTL_DEVICE_STATUS, function () {
+        return Cache::remember($this->tenantKey('devices:online'), self::TTL_DEVICE_STATUS, function () {
             return \App\Models\CpeDevice::where('status', 'online')
                 ->select('id', 'serial_number', 'manufacturer', 'model_name', 'status', 'last_inform')
                 ->get();
@@ -103,7 +132,7 @@ class CacheService
      */
     public function getConfigurationProfile($profileId)
     {
-        return Cache::remember("profile:{$profileId}", self::TTL_PROFILES, function () use ($profileId) {
+        return Cache::remember($this->tenantKey("profile:{$profileId}"), self::TTL_PROFILES, function () use ($profileId) {
             return \App\Models\ConfigurationProfile::find($profileId);
         });
     }
@@ -117,7 +146,7 @@ class CacheService
      */
     public function getDataModel($modelId)
     {
-        return Cache::remember("datamodel:{$modelId}", self::TTL_DATA_MODELS, function () use ($modelId) {
+        return Cache::remember($this->tenantKey("datamodel:{$modelId}"), self::TTL_DATA_MODELS, function () use ($modelId) {
             return \App\Models\Tr069DataModel::with('parameters')->find($modelId);
         });
     }
@@ -130,13 +159,13 @@ class CacheService
      */
     public function getDashboardStatistics()
     {
-        return Cache::remember('dashboard:statistics', self::TTL_STATISTICS, function () {
+        return Cache::remember($this->tenantKey('dashboard:statistics'), self::TTL_STATISTICS, function () {
             return [
                 'total_devices' => \App\Models\CpeDevice::count(),
                 'online_devices' => \App\Models\CpeDevice::where('status', 'online')->count(),
                 'offline_devices' => \App\Models\CpeDevice::where('status', 'offline')->count(),
                 'provisioning_tasks' => \App\Models\ProvisioningTask::where('status', 'pending')->count(),
-                'active_alarms' => \App\Models\Alarm::where('acknowledged', false)->count(),
+                'active_alarms' => \App\Models\Alarm::where('status', 'active')->count(),
                 'recent_sessions' => \App\Models\Tr069Session::where('created_at', '>=', now()->subHours(24))->count(),
             ];
         });
@@ -151,7 +180,7 @@ class CacheService
      */
     public function getNetworkTopology($deviceId)
     {
-        return Cache::remember("device:{$deviceId}:topology", self::TTL_TOPOLOGY, function () use ($deviceId) {
+        return Cache::remember($this->tenantKey("device:{$deviceId}:topology"), self::TTL_TOPOLOGY, function () use ($deviceId) {
             return \App\Models\NetworkClient::where('device_id', $deviceId)
                 ->where('active', true)
                 ->orderBy('connection_type')
@@ -168,12 +197,12 @@ class CacheService
      */
     public function invalidateDeviceCache($deviceId)
     {
-        Cache::forget("device:{$deviceId}:data");
-        Cache::forget("device:{$deviceId}:parameters");
-        Cache::forget("device:{$deviceId}:status");
-        Cache::forget("device:{$deviceId}:topology");
-        Cache::forget('devices:online');
-        Cache::forget('dashboard:statistics');
+        Cache::forget($this->tenantKey("device:{$deviceId}:data"));
+        Cache::forget($this->tenantKey("device:{$deviceId}:parameters"));
+        Cache::forget($this->tenantKey("device:{$deviceId}:status"));
+        Cache::forget($this->tenantKey("device:{$deviceId}:topology"));
+        Cache::forget($this->tenantKey('devices:online'));
+        Cache::forget($this->tenantKey('dashboard:statistics'));
     }
     
     /**
@@ -185,7 +214,7 @@ class CacheService
      */
     public function invalidateProfileCache($profileId)
     {
-        Cache::forget("profile:{$profileId}");
+        Cache::forget($this->tenantKey("profile:{$profileId}"));
     }
     
     /**
@@ -196,7 +225,34 @@ class CacheService
      */
     public function invalidateStatistics()
     {
-        Cache::forget('dashboard:statistics');
+        Cache::forget($this->tenantKey('dashboard:statistics'));
+    }
+
+    /**
+     * Invalidate all cache for current tenant
+     * 
+     * @return void
+     */
+    public function invalidateTenantCache(): void
+    {
+        $prefix = $this->getTenantPrefix();
+        
+        if (empty($prefix)) {
+            return;
+        }
+
+        $this->invalidateByPattern($prefix . '*', false);
+    }
+
+    /**
+     * Invalidate all cache for a specific tenant
+     * 
+     * @param int $tenantId
+     * @return void
+     */
+    public function invalidateTenantCacheById(int $tenantId): void
+    {
+        $this->invalidateByPattern("tenant:{$tenantId}:*", false);
     }
     
     /**
@@ -210,10 +266,12 @@ class CacheService
     public function incrementCounter($key, $ttl = 60)
     {
         $redis = Redis::connection();
-        $value = $redis->incr($key);
+        $tenantKey = $this->tenantKey($key);
+        $fullKey = config('cache.prefix') . ':' . $tenantKey;
+        $value = $redis->incr($fullKey);
         
         if ($value == 1) {
-            $redis->expire($key, $ttl);
+            $redis->expire($fullKey, $ttl);
         }
         
         return $value;
@@ -229,7 +287,7 @@ class CacheService
      */
     public function setSessionData($sessionId, $data)
     {
-        return Cache::put("session:{$sessionId}", $data, self::TTL_SESSION);
+        return Cache::put($this->tenantKey("session:{$sessionId}"), $data, self::TTL_SESSION);
     }
     
     /**
@@ -240,20 +298,36 @@ class CacheService
      */
     public function getSessionData($sessionId)
     {
-        return Cache::get("session:{$sessionId}");
+        return Cache::get($this->tenantKey("session:{$sessionId}"));
+    }
+
+    /**
+     * Delete session data from Redis
+     * 
+     * @param string $sessionId
+     * @return bool
+     */
+    public function deleteSessionData($sessionId)
+    {
+        return Cache::forget($this->tenantKey("session:{$sessionId}"));
     }
     
     /**
      * Bulk invalidate cache by pattern (usa Redis KEYS - attenzione in produzione)
      * Bulk invalidate cache by pattern (uses Redis KEYS - be careful in production)
+     * Pattern is automatically tenant-prefixed when tenant features are enabled
      * 
      * @param string $pattern
+     * @param bool $applyTenantPrefix Whether to apply tenant prefix (default: true)
      * @return void
      */
-    public function invalidateByPattern($pattern)
+    public function invalidateByPattern($pattern, $applyTenantPrefix = true)
     {
         $redis = Redis::connection();
-        $keys = $redis->keys(config('cache.prefix') . ':' . $pattern);
+        $searchPattern = $applyTenantPrefix 
+            ? config('cache.prefix') . ':' . $this->tenantKey($pattern)
+            : config('cache.prefix') . ':' . $pattern;
+        $keys = $redis->keys($searchPattern);
         
         if (!empty($keys)) {
             $redis->del($keys);

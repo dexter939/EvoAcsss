@@ -328,7 +328,7 @@ Broadcast::channel('tenant.{tenantId}.devices.{deviceId}', function (User $user,
 ### Deliverables
 - [x] Token scoping enforced (TenantAwareTokenService, ValidateTokenTenant middleware)
 - [ ] Session isolation complete
-- [ ] Cache namespacing active
+- [x] Cache namespacing active (CacheService with tenant-prefixed keys)
 - [ ] Queue tenant tags working
 - [ ] WebSocket channels tenant-aware
 - [ ] Legacy fallback paths removed
@@ -338,6 +338,12 @@ Broadcast::channel('tenant.{tenantId}.devices.{deviceId}', function (User $user,
 - ValidateTokenTenant middleware validates token-tenant alignment
 - Cross-tenant token access logged as critical security events
 - Token-user tenant mismatch detection and logging
+
+**Cache Namespacing Status: IMPLEMENTED (December 2025)**
+- CacheService auto-prefixes all keys with "tenant:{id}:" when tenant.enabled=true
+- All cache methods updated: device, profile, statistics, topology, session, rate limiting
+- invalidateTenantCache() and invalidateTenantCacheById() for bulk tenant cache clearing
+- Backward compatible: empty prefix when tenant features disabled
 
 ---
 
