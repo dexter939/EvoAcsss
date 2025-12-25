@@ -17,10 +17,8 @@ class ValidateSessionTenant
             return $next($request);
         }
 
-        if (!config('tenant.enforce_isolation', false)) {
-            return $next($request);
-        }
-
+        $enforceIsolation = config('tenant.enforce_isolation', false);
+        
         $user = $request->user();
         
         if (!$user) {
@@ -32,11 +30,6 @@ class ValidateSessionTenant
         $contextTenantId = TenantContext::id();
 
         $currentTenantId = $contextTenantId ?? $userTenantId;
-
-        if ($sessionTenantId === null && $currentTenantId !== null) {
-            session(['tenant_id' => $currentTenantId]);
-            return $next($request);
-        }
 
         if ($sessionTenantId !== null && $currentTenantId !== null) {
             if ((int) $sessionTenantId !== (int) $currentTenantId) {
@@ -50,7 +43,21 @@ class ValidateSessionTenant
             }
         }
 
-        if ($sessionTenantId === null && $currentTenantId !== null) {
+        if ($enforceIsolation && $sessionTenantId === null && $currentTenantId !== null) {
+            if (config('tenant.require_session_tenant', false)) {
+                $this->logNullTenantSessionAccess($request, $user, $currentTenantId);
+                
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                
+                return redirect()->route('login')->with('error', 'Session expired. Please login again.');
+            }
+            
+            session(['tenant_id' => $currentTenantId]);
+        }
+
+        if (!$enforceIsolation && $sessionTenantId === null && $currentTenantId !== null) {
             session(['tenant_id' => $currentTenantId]);
         }
 
@@ -75,6 +82,26 @@ class ValidateSessionTenant
             Log::channel($channel)->critical('Session tenant mismatch - possible hijacking attempt', $logData);
         } catch (\Throwable $e) {
             Log::critical('Session tenant mismatch - possible hijacking attempt', $logData);
+        }
+    }
+
+    protected function logNullTenantSessionAccess(Request $request, $user, int $currentTenantId): void
+    {
+        $logData = [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'current_tenant_id' => $currentTenantId,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'path' => $request->path(),
+            'severity' => 'warning',
+        ];
+
+        try {
+            $channel = config('logging.channels.security') ? 'security' : 'daily';
+            Log::channel($channel)->warning('Null-tenant session rejected (require_session_tenant enabled)', $logData);
+        } catch (\Throwable $e) {
+            Log::warning('Null-tenant session rejected (require_session_tenant enabled)', $logData);
         }
     }
 }

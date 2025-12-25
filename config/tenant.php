@@ -17,6 +17,8 @@ return [
 
     'require_tenant' => env('TENANT_REQUIRE_TENANT', false),
 
+    'require_session_tenant' => env('TENANT_REQUIRE_SESSION_TENANT', false),
+
     'default_id' => env('TENANT_DEFAULT_ID', 1),
 
     'header_name' => env('TENANT_HEADER_NAME', 'X-Tenant-ID'),

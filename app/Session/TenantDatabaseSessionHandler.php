@@ -45,6 +45,13 @@ class TenantDatabaseSessionHandler extends DatabaseSessionHandler
                     return '';
                 }
             }
+            
+            if (config('tenant.require_session_tenant', false)) {
+                if ($tenantId !== null && $session->tenant_id === null) {
+                    $this->logNullTenantSessionRejected($sessionId, $tenantId);
+                    return '';
+                }
+            }
         }
 
         if (isset($session->payload)) {
@@ -174,6 +181,24 @@ class TenantDatabaseSessionHandler extends DatabaseSessionHandler
             \Illuminate\Support\Facades\Log::channel($channel)->warning('Cross-tenant session access attempt', $logData);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Cross-tenant session access attempt', $logData);
+        }
+    }
+
+    protected function logNullTenantSessionRejected(string $sessionId, int $contextTenantId): void
+    {
+        $logData = [
+            'session_id' => substr($sessionId, 0, 8) . '...',
+            'context_tenant_id' => $contextTenantId,
+            'ip_address' => request()?->ip(),
+            'user_agent' => request()?->userAgent(),
+            'severity' => 'warning',
+        ];
+
+        try {
+            $channel = config('logging.channels.security') ? 'security' : 'daily';
+            \Illuminate\Support\Facades\Log::channel($channel)->warning('Null-tenant session rejected (require_session_tenant enabled)', $logData);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Null-tenant session rejected (require_session_tenant enabled)', $logData);
         }
     }
 }

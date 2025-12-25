@@ -327,7 +327,7 @@ Broadcast::channel('tenant.{tenantId}.devices.{deviceId}', function (User $user,
 
 ### Deliverables
 - [x] Token scoping enforced (TenantAwareTokenService, ValidateTokenTenant middleware)
-- [ ] Session isolation complete
+- [x] Session isolation complete (TenantDatabaseSessionHandler, ValidateSessionTenant middleware)
 - [x] Cache namespacing active (CacheService with tenant-prefixed keys)
 - [ ] Queue tenant tags working
 - [ ] WebSocket channels tenant-aware
@@ -338,6 +338,19 @@ Broadcast::channel('tenant.{tenantId}.devices.{deviceId}', function (User $user,
 - ValidateTokenTenant middleware validates token-tenant alignment
 - Cross-tenant token access logged as critical security events
 - Token-user tenant mismatch detection and logging
+
+**Session Isolation Status: IMPLEMENTED (December 2025)**
+- TenantDatabaseSessionHandler extends DatabaseSessionHandler with tenant validation
+- Dual-layer protection: session handler level + middleware level validation
+- Sessions table has tenant_id column (migration: 2025_12_25_115231)
+- ValidateSessionTenant middleware validates session tenant after authentication
+- Cross-tenant session mismatch triggers logout + session invalidation
+- Feature flags for gradual rollout:
+  - TENANT_ENABLED=true: Enable tenant context
+  - TENANT_ENFORCE_ISOLATION=true: Enforce tenant validation
+  - TENANT_REQUIRE_SESSION_TENANT=true: Reject null-tenant sessions
+- New session driver: SESSION_DRIVER=tenant_database
+- Security logging for cross-tenant access attempts to dedicated security channel
 
 **Cache Namespacing Status: IMPLEMENTED (December 2025)**
 - CacheService auto-prefixes all keys with "tenant:{id}:" when tenant.enabled=true
