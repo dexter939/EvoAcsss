@@ -60,7 +60,7 @@ The web interface utilizes the **Soft UI Dashboard Pro Laravel** template for a 
 
 # External Dependencies
 - **PostgreSQL 16+**: Primary relational database.
-- **Redis 7+**: Queue driver for Laravel Horizon, WebSocket message routing, and Prometheus metrics storage.
+- **Redis 7+**: Queue driver for Laravel Horizon, WebSocket message routing, and Prometheus metrics storage. **Cluster Support (December 2025)**: Production-grade Redis Cluster (6-node) and Sentinel configuration for high availability, TLS encryption support, separate databases for cache/session/queue/broadcast isolation. See `docs/REDIS_CLUSTER_GUIDE.md`.
 - **Laravel Reverb v1.6.0**: Built-in WebSocket server for real-time broadcasting (NEW - November 2025).
 - **Laravel Horizon**: Manages Redis queues.
 - **Guzzle**: HTTP client.
