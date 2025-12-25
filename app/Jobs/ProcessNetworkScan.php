@@ -7,10 +7,11 @@ use App\Models\ProvisioningTask;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use App\Traits\TenantAwareJob;
 
 class ProcessNetworkScan implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, TenantAwareJob;
 
     public $timeout = 120;
     public $tries = 3;

@@ -9,10 +9,11 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
+use App\Traits\TenantAwareJob;
 
 class SendAlertNotificationJob implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, TenantAwareJob;
 
     public $tries = 3;
     public $backoff = [60, 300, 900];

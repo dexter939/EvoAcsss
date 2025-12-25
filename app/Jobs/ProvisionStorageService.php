@@ -12,10 +12,11 @@ use Illuminate\Bus\Queueable as BusQueueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use App\Traits\TenantAwareJob;
 
 class ProvisionStorageService implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, BusQueueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, BusQueueable, SerializesModels, TenantAwareJob;
 
     public $tries = 3;
     public $timeout = 120;

@@ -11,6 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Log;
+use App\Traits\TenantAwareJob;
 
 /**
  * ProcessFirmwareDeployment - Job per elaborazione deployment firmware
@@ -35,7 +36,7 @@ use Illuminate\Support\Facades\Log;
  */
 class ProcessFirmwareDeployment implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, BusQueueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, BusQueueable, SerializesModels, TenantAwareJob;
 
     /**
      * Numero massimo tentativi / Maximum number of attempts

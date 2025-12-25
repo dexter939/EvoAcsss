@@ -13,6 +13,7 @@ use Illuminate\Bus\Queueable as BusQueueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use App\Traits\TenantAwareJob;
 
 /**
  * ProcessProvisioningTask - Job per elaborazione asincrona task provisioning
@@ -38,7 +39,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
  */
 class ProcessProvisioningTask implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, BusQueueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, BusQueueable, SerializesModels, TenantAwareJob;
 
     /**
      * Numero massimo tentativi / Maximum number of attempts

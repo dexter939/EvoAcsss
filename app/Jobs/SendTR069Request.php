@@ -4,10 +4,11 @@ namespace App\Jobs;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use App\Traits\TenantAwareJob;
 
 class SendTR069Request implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, TenantAwareJob;
 
     /**
      * Create a new job instance.
