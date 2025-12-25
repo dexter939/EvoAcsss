@@ -21,6 +21,9 @@
         <testsuite name="Security">
             <directory>tests/Security</directory>
         </testsuite>
+        <testsuite name="MultiTenant">
+            <directory>tests/Feature/MultiTenant</directory>
+        </testsuite>
     </testsuites>
     
     <source>

@@ -241,6 +241,25 @@ php artisan test --stop-on-failure
 - ✅ Automation rule execution
 - ✅ State synchronization
 
+## Multi-Tenant Tests (NEW - December 2025)
+
+### Location: `tests/Feature/MultiTenant/`
+
+| Test File | Coverage |
+|-----------|----------|
+| `TenantScopingTest.php` | Device/alarm tenant isolation, context inheritance |
+| `WebSocketChannelsTest.php` | Tenant channel broadcasting, severity filtering |
+| `SecurityAlertTest.php` | Security alerts, anomaly detection alerts |
+
+### Location: `tests/Unit/Services/`
+
+| Test File | Coverage |
+|-----------|----------|
+| `TenantContextTest.php` | TenantContext singleton, runAs(), clear() |
+| `TenantAnomalyDetectorTest.php` | Cross-tenant detection, IP anomaly, rate limiting |
+
+**Test Count**: 25+ multi-tenant tests
+
 ## Next Steps
 
 ### Performance Testing
