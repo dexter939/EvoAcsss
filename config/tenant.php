@@ -11,13 +11,13 @@ return [
     |
     */
 
-    'enabled' => env('TENANT_ENABLED', false),
+    'enabled' => env('TENANT_ENABLED', true),
 
-    'enforce_isolation' => env('TENANT_ENFORCE_ISOLATION', false),
+    'enforce_isolation' => env('TENANT_ENFORCE_ISOLATION', true),
 
-    'require_tenant' => env('TENANT_REQUIRE_TENANT', false),
+    'require_tenant' => env('TENANT_REQUIRE_TENANT', true),
 
-    'require_session_tenant' => env('TENANT_REQUIRE_SESSION_TENANT', false),
+    'require_session_tenant' => env('TENANT_REQUIRE_SESSION_TENANT', true),
 
     'default_id' => env('TENANT_DEFAULT_ID', 1),
 

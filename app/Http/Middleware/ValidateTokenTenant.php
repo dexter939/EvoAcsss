@@ -22,14 +22,6 @@ class ValidateTokenTenant
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (!config('tenant.enabled', false)) {
-            return $next($request);
-        }
-
-        if (!config('tenant.enforce_isolation', false)) {
-            return $next($request);
-        }
-
         $user = $request->user();
         if (!$user) {
             return $next($request);
@@ -46,47 +38,45 @@ class ValidateTokenTenant
         $tokenTenantId = $this->getTokenTenantId($token->id);
         $contextTenantId = TenantContext::id();
 
-        if ($tokenTenantId !== null && $contextTenantId !== null) {
-            if ((int) $tokenTenantId !== (int) $contextTenantId) {
-                $this->logSecurityEvent(
-                    'cross_tenant_token_access',
-                    'Cross-tenant token access attempt detected',
-                    $request,
-                    $user,
-                    [
-                        'token_tenant_id' => $tokenTenantId,
-                        'context_tenant_id' => $contextTenantId,
-                        'user_tenant_id' => $user->tenant_id,
-                        'severity' => 'critical',
-                    ]
-                );
+        // Enforce token-context tenant match
+        if ((int) $tokenTenantId !== (int) $contextTenantId) {
+            $this->logSecurityEvent(
+                'cross_tenant_token_access',
+                'Cross-tenant token access attempt detected',
+                $request,
+                $user,
+                [
+                    'token_tenant_id' => $tokenTenantId,
+                    'context_tenant_id' => $contextTenantId,
+                    'user_tenant_id' => $user->tenant_id,
+                    'severity' => 'critical',
+                ]
+            );
 
-                return response()->json([
-                    'error' => 'Token scope violation',
-                    'message' => 'This token is not valid for the requested tenant.',
-                ], 403);
-            }
+            return response()->json([
+                'error' => 'Token scope violation',
+                'message' => 'This token is not valid for the requested tenant.',
+            ], 403);
         }
 
-        if ($tokenTenantId !== null && $user->tenant_id !== null) {
-            if ((int) $tokenTenantId !== (int) $user->tenant_id) {
-                $this->logSecurityEvent(
-                    'token_user_tenant_mismatch',
-                    'Token tenant does not match user tenant',
-                    $request,
-                    $user,
-                    [
-                        'token_tenant_id' => $tokenTenantId,
-                        'user_tenant_id' => $user->tenant_id,
-                        'severity' => 'warning',
-                    ]
-                );
+        // Enforce token-user tenant match
+        if ((int) $tokenTenantId !== (int) $user->tenant_id) {
+            $this->logSecurityEvent(
+                'token_user_tenant_mismatch',
+                'Token tenant does not match user tenant',
+                $request,
+                $user,
+                [
+                    'token_tenant_id' => $tokenTenantId,
+                    'user_tenant_id' => $user->tenant_id,
+                    'severity' => 'warning',
+                ]
+            );
 
-                return response()->json([
-                    'error' => 'Token-user mismatch',
-                    'message' => 'Token tenant does not match user tenant.',
-                ], 403);
-            }
+            return response()->json([
+                'error' => 'Token-user mismatch',
+                'message' => 'Token tenant does not match user tenant.',
+            ], 403);
         }
 
         return $next($request);
