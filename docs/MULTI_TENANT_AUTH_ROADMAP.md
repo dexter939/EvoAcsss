@@ -464,7 +464,7 @@ AuditLog::create([
 - [x] Anomaly detection active (TenantAnomalyDetector service)
 - [x] WAF rules documented (docs/SECURITY_HARDENING.md)
 - [x] Audit logging complete (security_alerts table, SecurityAlertService)
-- [ ] BBF.369 compliance verified
+- [x] BBF.369 compliance verified (docs/BBF369_COMPLIANCE_VERIFICATION.md)
 
 **Security Hardening Status: IMPLEMENTED (December 2025)**
 - RotateTenantSecrets command with grace period support
