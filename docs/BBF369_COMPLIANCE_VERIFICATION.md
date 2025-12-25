@@ -320,3 +320,4 @@ The system is **ready for BBF.369 certification testing** using CDRouter or equi
 - [BBF.369 Certification Program](https://www.broadband-forum.org/testing-and-certification-programs/bbf-369-usp-certification)
 - [USP Test Plan (TP-469)](https://usp-test.broadband-forum.org/)
 - [CDRouter USP Testing](https://www.qacafe.com/resources/how-do-i-get-tr-369-usp-certified/)
+- [CDRouter Testing Guide](./CDROUTER_TESTING_GUIDE.md) - Internal guide for ACS testing
