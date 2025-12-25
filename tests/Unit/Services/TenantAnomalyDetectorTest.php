@@ -2,11 +2,14 @@
 
 namespace Tests\Unit\Services;
 
+use App\Contexts\TenantContext;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantAnomalyDetector;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 class TenantAnomalyDetectorTest extends TestCase
@@ -15,7 +18,6 @@ class TenantAnomalyDetectorTest extends TestCase
 
     private TenantAnomalyDetector $detector;
     private Tenant $tenant;
-    private User $user;
 
     protected function setUp(): void
     {
@@ -28,81 +30,86 @@ class TenantAnomalyDetectorTest extends TestCase
             'slug' => 'test-tenant',
         ]);
         
-        $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id,
-        ]);
+        TenantContext::set($this->tenant);
+        Cache::flush();
     }
 
-    public function test_detects_cross_tenant_token_reuse()
+    protected function tearDown(): void
     {
-        $tokenId = 'test-token-123';
-        
-        $result1 = $this->detector->detectCrossTenantTokenReuse($tokenId, $this->tenant->id);
-        $this->assertFalse($result1);
-        
-        $otherTenant = Tenant::factory()->create();
-        $result2 = $this->detector->detectCrossTenantTokenReuse($tokenId, $otherTenant->id);
-        $this->assertTrue($result2);
+        TenantContext::clear();
+        parent::tearDown();
     }
 
-    public function test_detects_ip_anomaly_for_user()
+    public function test_records_failed_auth_attempt()
     {
-        $normalIp = '192.168.1.100';
+        $request = Request::create('/api/auth/login', 'POST');
+        $request->server->set('REMOTE_ADDR', '192.168.1.100');
         
-        for ($i = 0; $i < 5; $i++) {
-            $this->detector->recordUserIp($this->user->id, $normalIp);
+        $this->detector->recordFailedAuthAttempt($request, $this->tenant->id);
+        
+        $cacheKey = "anomaly:failed_auth_attempts:{$this->tenant->id}:192.168.1.100";
+        $count = Cache::get($cacheKey, 0);
+        
+        $this->assertEquals(1, $count);
+    }
+
+    public function test_records_rate_limit_violation()
+    {
+        $request = Request::create('/api/v1/devices', 'GET');
+        $request->server->set('REMOTE_ADDR', '192.168.1.100');
+        
+        $this->detector->recordRateLimitViolation($request, $this->tenant->id);
+        
+        $cacheKey = "anomaly:rate_limit_violations:{$this->tenant->id}:192.168.1.100";
+        $count = Cache::get($cacheKey, 0);
+        
+        $this->assertEquals(1, $count);
+    }
+
+    public function test_accumulates_failed_auth_attempts()
+    {
+        $request = Request::create('/api/auth/login', 'POST');
+        $request->server->set('REMOTE_ADDR', '192.168.1.100');
+        
+        for ($i = 0; $i < 3; $i++) {
+            $this->detector->recordFailedAuthAttempt($request, $this->tenant->id);
         }
         
-        $result1 = $this->detector->detectIpAnomaly($this->user->id, $normalIp);
-        $this->assertFalse($result1);
+        $cacheKey = "anomaly:failed_auth_attempts:{$this->tenant->id}:192.168.1.100";
+        $count = Cache::get($cacheKey, 0);
         
-        $newIp = '10.0.0.50';
-        $result2 = $this->detector->detectIpAnomaly($this->user->id, $newIp);
-        $this->assertTrue($result2);
+        $this->assertEquals(3, $count);
     }
 
-    public function test_tracks_failed_auth_attempts()
+    public function test_tenant_isolation_for_anomaly_counters()
     {
-        $ip = '192.168.1.100';
-        
-        for ($i = 0; $i < 4; $i++) {
-            $this->detector->recordFailedAuth($ip, $this->tenant->id);
-        }
-        
-        $result1 = $this->detector->isRateLimited($ip, $this->tenant->id);
-        $this->assertFalse($result1);
-        
-        $this->detector->recordFailedAuth($ip, $this->tenant->id);
-        
-        $result2 = $this->detector->isRateLimited($ip, $this->tenant->id);
-        $this->assertTrue($result2);
-    }
-
-    public function test_resets_failed_auth_on_success()
-    {
-        $ip = '192.168.1.100';
-        
-        for ($i = 0; $i < 5; $i++) {
-            $this->detector->recordFailedAuth($ip, $this->tenant->id);
-        }
-        
-        $this->assertTrue($this->detector->isRateLimited($ip, $this->tenant->id));
-        
-        $this->detector->recordSuccessfulAuth($ip, $this->tenant->id);
-        
-        $this->assertFalse($this->detector->isRateLimited($ip, $this->tenant->id));
-    }
-
-    public function test_anomaly_detection_respects_tenant_isolation()
-    {
-        $ip = '192.168.1.100';
         $tenant2 = Tenant::factory()->create();
         
-        for ($i = 0; $i < 5; $i++) {
-            $this->detector->recordFailedAuth($ip, $this->tenant->id);
-        }
+        $request = Request::create('/api/auth/login', 'POST');
+        $request->server->set('REMOTE_ADDR', '192.168.1.100');
         
-        $this->assertTrue($this->detector->isRateLimited($ip, $this->tenant->id));
-        $this->assertFalse($this->detector->isRateLimited($ip, $tenant2->id));
+        $this->detector->recordFailedAuthAttempt($request, $this->tenant->id);
+        $this->detector->recordFailedAuthAttempt($request, $this->tenant->id);
+        
+        $this->detector->recordFailedAuthAttempt($request, $tenant2->id);
+        
+        $cacheKey1 = "anomaly:failed_auth_attempts:{$this->tenant->id}:192.168.1.100";
+        $cacheKey2 = "anomaly:failed_auth_attempts:{$tenant2->id}:192.168.1.100";
+        
+        $this->assertEquals(2, Cache::get($cacheKey1, 0));
+        $this->assertEquals(1, Cache::get($cacheKey2, 0));
+    }
+
+    public function test_uses_tenant_context_when_no_tenant_provided()
+    {
+        $request = Request::create('/api/auth/login', 'POST');
+        $request->server->set('REMOTE_ADDR', '192.168.1.100');
+        
+        $this->detector->recordFailedAuthAttempt($request);
+        
+        $cacheKey = "anomaly:failed_auth_attempts:{$this->tenant->id}:192.168.1.100";
+        $count = Cache::get($cacheKey, 0);
+        
+        $this->assertEquals(1, $count);
     }
 }

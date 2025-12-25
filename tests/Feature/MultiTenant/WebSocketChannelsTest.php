@@ -8,13 +8,11 @@ use App\Models\CpeDevice;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class WebSocketChannelsTest extends TestCase
 {
-    use RefreshDatabase;
 
     private Tenant $tenant;
     private User $user;

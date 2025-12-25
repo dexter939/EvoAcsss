@@ -5,13 +5,11 @@ namespace Tests\Feature\MultiTenant;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\SecurityAlertService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class SecurityAlertTest extends TestCase
 {
-    use RefreshDatabase;
 
     private SecurityAlertService $alertService;
     private Tenant $tenant;

@@ -2,29 +2,24 @@
 
 namespace Tests\Feature\MultiTenant;
 
+use App\Contexts\TenantContext;
 use App\Models\Alarm;
 use App\Models\CpeDevice;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Services\TenantContext;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class TenantScopingTest extends TestCase
 {
-    use RefreshDatabase;
 
     private Tenant $tenant1;
     private Tenant $tenant2;
     private User $user1;
     private User $user2;
-    private TenantContext $context;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->context = app(TenantContext::class);
         
         $this->tenant1 = Tenant::factory()->create(['name' => 'Tenant 1']);
         $this->tenant2 = Tenant::factory()->create(['name' => 'Tenant 2']);
@@ -35,7 +30,7 @@ class TenantScopingTest extends TestCase
 
     protected function tearDown(): void
     {
-        $this->context->clear();
+        TenantContext::clear();
         parent::tearDown();
     }
 
@@ -51,7 +46,7 @@ class TenantScopingTest extends TestCase
             'serial_number' => 'DEVICE-T2-001',
         ]);
         
-        $this->context->set($this->tenant1);
+        TenantContext::set($this->tenant1);
         
         if (config('tenant.enforce_isolation', false)) {
             $devices = CpeDevice::all();
@@ -79,7 +74,7 @@ class TenantScopingTest extends TestCase
             'title' => 'Alarm Tenant 2',
         ]);
         
-        $this->context->set($this->tenant1);
+        TenantContext::set($this->tenant1);
         
         if (config('tenant.enforce_isolation', false)) {
             $alarms = Alarm::all();
@@ -100,7 +95,7 @@ class TenantScopingTest extends TestCase
 
     public function test_new_devices_inherit_tenant_from_context()
     {
-        $this->context->set($this->tenant1);
+        TenantContext::set($this->tenant1);
         
         $device = new CpeDevice([
             'serial_number' => 'NEW-DEVICE-001',

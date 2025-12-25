@@ -3,7 +3,7 @@
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\Fakes\FakeUspMqttService;
 use Tests\Fakes\FakeUspWebSocketService;
 use Tests\Fakes\FakeUpnpDiscoveryService;
@@ -17,7 +17,7 @@ use App\Services\ConnectionRequestService;
 
 abstract class TestCase extends BaseTestCase
 {
-    use CreatesApplication, RefreshDatabase;
+    use CreatesApplication, DatabaseTransactions;
 
     /**
      * Setup the test environment.
