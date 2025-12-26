@@ -16,49 +16,30 @@
         
         <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
             <div class="ms-md-auto pe-md-3 d-flex align-items-center">
-                <!-- Search can be added here if needed -->
             </div>
             
             <ul class="navbar-nav justify-content-end">
-                <!-- Online Devices Counter -->
                 <li class="nav-item d-flex align-items-center me-3">
                     <div class="d-flex align-items-center">
                         <span class="badge badge-sm bg-gradient-success">
                             <i class="fas fa-circle text-white me-1" style="font-size: 0.5rem;"></i>
-                            <span id="online-devices-count">0</span> Online
+                            <span id="online-devices-count">-</span> ONLINE
                         </span>
                     </div>
                 </li>
                 
-                <!-- Notifications -->
                 <li class="nav-item dropdown pe-2 d-flex align-items-center">
                     <a href="javascript:;" class="nav-link text-body p-0" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fa fa-bell cursor-pointer"></i>
-                        <span class="badge bg-danger badge-sm badge-circle">3</span>
+                        <span class="badge bg-danger badge-sm badge-circle" id="notifications-count" style="display: none;">0</span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end px-2 py-3 me-sm-n4" aria-labelledby="dropdownMenuButton">
-                        <li class="mb-2">
-                            <a class="dropdown-item border-radius-md" href="javascript:;">
-                                <div class="d-flex py-1">
-                                    <div class="my-auto">
-                                        <img src="/assets/img/small-logos/logo-spotify.svg" class="avatar avatar-sm me-3">
-                                    </div>
-                                    <div class="d-flex flex-column justify-content-center">
-                                        <h6 class="text-sm font-weight-normal mb-1">
-                                            <span class="font-weight-bold">New device</span> registered
-                                        </h6>
-                                        <p class="text-xs text-secondary mb-0">
-                                            <i class="fa fa-clock me-1"></i>
-                                            2 minutes ago
-                                        </p>
-                                    </div>
-                                </div>
-                            </a>
+                    <ul class="dropdown-menu dropdown-menu-end px-2 py-3 me-sm-n4" aria-labelledby="dropdownMenuButton" id="notifications-list">
+                        <li class="text-center text-xs text-secondary py-2" id="no-notifications">
+                            <i class="fas fa-check-circle me-1"></i> Nessuna notifica
                         </li>
                     </ul>
                 </li>
                 
-                <!-- Mobile Menu Toggle -->
                 <li class="nav-item d-xl-none ps-3 d-flex align-items-center">
                     <a href="javascript:;" class="nav-link text-body p-0" id="iconNavbarSidenav">
                         <div class="sidenav-toggler-inner">
@@ -74,32 +55,70 @@
 </nav>
 
 <script>
-// Update online devices count - Disabled to prevent cache issues in mobile app
-// Will be re-enabled after proper cache busting implementation
-/*
-function updateOnlineCount() {
-    fetch('/dashboard', {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        },
-        credentials: 'same-origin'
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
+(function() {
+    function updateNavbarStats() {
+        fetch('{{ route("dashboard.stats") }}', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
             return response.json();
         })
-        .then(data => {
-            document.getElementById('online-devices-count').textContent = data.devices.online || 0;
+        .then(function(data) {
+            var onlineEl = document.getElementById('online-devices-count');
+            if (onlineEl && data.devices) {
+                onlineEl.textContent = data.devices.online || 0;
+            }
+            
+            var alarmsCount = 0;
+            if (data.alarms) {
+                alarmsCount = (data.alarms.critical || 0) + (data.alarms.major || 0);
+            }
+            
+            var countBadge = document.getElementById('notifications-count');
+            var notifList = document.getElementById('notifications-list');
+            var noNotif = document.getElementById('no-notifications');
+            
+            if (countBadge) {
+                if (alarmsCount > 0) {
+                    countBadge.textContent = alarmsCount > 99 ? '99+' : alarmsCount;
+                    countBadge.style.display = '';
+                } else {
+                    countBadge.style.display = 'none';
+                }
+            }
+            
+            if (notifList && data.alarms) {
+                var html = '';
+                if (data.alarms.critical > 0) {
+                    html += '<li class="mb-2"><a class="dropdown-item border-radius-md" href="{{ route("acs.alarms") }}?severity=critical">' +
+                        '<div class="d-flex py-1"><div class="my-auto me-3"><span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i></span></div>' +
+                        '<div class="d-flex flex-column justify-content-center"><h6 class="text-sm font-weight-normal mb-1"><span class="font-weight-bold text-danger">' + 
+                        data.alarms.critical + '</span> allarmi critici</h6></div></div></a></li>';
+                }
+                if (data.alarms.major > 0) {
+                    html += '<li class="mb-2"><a class="dropdown-item border-radius-md" href="{{ route("acs.alarms") }}?severity=major">' +
+                        '<div class="d-flex py-1"><div class="my-auto me-3"><span class="badge bg-warning"><i class="fas fa-exclamation-circle"></i></span></div>' +
+                        '<div class="d-flex flex-column justify-content-center"><h6 class="text-sm font-weight-normal mb-1"><span class="font-weight-bold text-warning">' + 
+                        data.alarms.major + '</span> allarmi major</h6></div></div></a></li>';
+                }
+                if (html) {
+                    notifList.innerHTML = html;
+                } else if (noNotif) {
+                    notifList.innerHTML = '<li class="text-center text-xs text-secondary py-2"><i class="fas fa-check-circle me-1"></i> Nessuna notifica</li>';
+                }
+            }
         })
-        .catch(error => console.error('Error fetching stats:', error));
-}
-
-// Update every 30 seconds
-setInterval(updateOnlineCount, 30000);
-// Initial load
-updateOnlineCount();
-*/
+        .catch(function(err) {
+            console.log('Stats update error:', err.message);
+        });
+    }
+    
+    updateNavbarStats();
+    setInterval(updateNavbarStats, 30000);
+})();
 </script>
