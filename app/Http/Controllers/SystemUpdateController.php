@@ -163,15 +163,14 @@ class SystemUpdateController extends Controller
         }
 
         $user = $request->user();
-        $approvedBy = $user ? $user->name : 'admin';
 
-        $version->approve($approvedBy);
+        $version->approve($user?->id);
 
         return response()->json([
             'success' => true,
             'message' => 'Update approved successfully',
             'version' => $version->version,
-            'approved_by' => $approvedBy,
+            'approved_by' => $user?->name ?? 'admin',
             'approved_at' => $version->approved_at->toIso8601String(),
         ]);
     }
@@ -200,10 +199,9 @@ class SystemUpdateController extends Controller
         }
 
         $user = $request->user();
-        $rejectedBy = $user ? $user->name : 'admin';
         $reason = $request->input('reason');
 
-        $version->reject($rejectedBy, $reason);
+        $version->reject($user?->id, $reason);
 
         $this->stagingService->cleanupStagedUpdate($version);
 
@@ -211,7 +209,7 @@ class SystemUpdateController extends Controller
             'success' => true,
             'message' => 'Update rejected and cleaned up',
             'version' => $version->version,
-            'rejected_by' => $rejectedBy,
+            'rejected_by' => $user?->name ?? 'admin',
         ]);
     }
 

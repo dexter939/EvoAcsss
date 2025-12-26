@@ -4,10 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
 class SystemVersion extends Model
 {
+    public function approvedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function getApprovedByUserAttribute()
+    {
+        if (!$this->approved_by) {
+            return null;
+        }
+
+        if (is_numeric($this->approved_by)) {
+            return User::find($this->approved_by);
+        }
+
+        return (object) ['name' => $this->approved_by];
+    }
     protected $fillable = [
         'version',
         'deployment_status',
@@ -184,22 +202,22 @@ class SystemVersion extends Model
         return $query->where('approval_status', 'approved');
     }
 
-    public function approve(string $approvedBy): self
+    public function approve(?int $userId = null): self
     {
         $this->update([
             'approval_status' => 'approved',
-            'approved_by' => $approvedBy,
+            'approved_by' => $userId ?? auth()->id(),
             'approved_at' => now(),
         ]);
 
         return $this;
     }
 
-    public function reject(string $rejectedBy, ?string $reason = null): self
+    public function reject(?int $userId = null, ?string $reason = null): self
     {
         $this->update([
             'approval_status' => 'rejected',
-            'approved_by' => $rejectedBy,
+            'approved_by' => $userId ?? auth()->id(),
             'approved_at' => now(),
             'deployment_notes' => $reason ? "Rejected: {$reason}" : 'Rejected',
         ]);
