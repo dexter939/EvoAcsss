@@ -57,7 +57,7 @@
 <script>
 (function() {
     function updateNavbarStats() {
-        fetch('{{ route("dashboard.stats") }}', {
+        fetch('{{ route("acs.dashboard.stats") }}', {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json'

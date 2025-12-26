@@ -1,0 +1,149 @@
+# Symfony\Component\Routing\Exception\RouteNotFoundException - Internal Server Error
+Route [dashboard.stats] not defined.
+
+PHP 8.3.23
+Laravel 12.33.0
+af033280-2a00-40b8-aa0d-5550f59fd4d2-00-6y2330nmtgv4.janeway.replit.dev
+
+## Stack Trace
+
+0 - vendor/laravel/framework/src/Illuminate/Routing/UrlGenerator.php:526
+1 - vendor/laravel/framework/src/Illuminate/Foundation/helpers.php:871
+2 - resources/views/layouts/navbars/navbar.blade.php:60
+3 - vendor/laravel/framework/src/Illuminate/Filesystem/Filesystem.php:123
+4 - vendor/laravel/framework/src/Illuminate/Filesystem/Filesystem.php:124
+5 - vendor/laravel/framework/src/Illuminate/View/Engines/PhpEngine.php:57
+6 - vendor/laravel/framework/src/Illuminate/View/Engines/CompilerEngine.php:76
+7 - vendor/laravel/framework/src/Illuminate/View/View.php:208
+8 - vendor/laravel/framework/src/Illuminate/View/View.php:191
+9 - vendor/laravel/framework/src/Illuminate/View/View.php:160
+10 - resources/views/layouts/app.blade.php:35
+11 - vendor/laravel/framework/src/Illuminate/Filesystem/Filesystem.php:123
+12 - vendor/laravel/framework/src/Illuminate/Filesystem/Filesystem.php:124
+13 - vendor/laravel/framework/src/Illuminate/View/Engines/PhpEngine.php:57
+14 - vendor/laravel/framework/src/Illuminate/View/Engines/CompilerEngine.php:76
+15 - vendor/laravel/framework/src/Illuminate/View/View.php:208
+16 - vendor/laravel/framework/src/Illuminate/View/View.php:191
+17 - vendor/laravel/framework/src/Illuminate/View/View.php:160
+18 - resources/views/acs/dashboard.blade.php:783
+19 - vendor/laravel/framework/src/Illuminate/Filesystem/Filesystem.php:123
+20 - vendor/laravel/framework/src/Illuminate/Filesystem/Filesystem.php:124
+21 - vendor/laravel/framework/src/Illuminate/View/Engines/PhpEngine.php:57
+22 - vendor/laravel/framework/src/Illuminate/View/Engines/CompilerEngine.php:76
+23 - vendor/laravel/framework/src/Illuminate/View/View.php:208
+24 - vendor/laravel/framework/src/Illuminate/View/View.php:191
+25 - vendor/laravel/framework/src/Illuminate/View/View.php:160
+26 - vendor/laravel/framework/src/Illuminate/Http/Response.php:78
+27 - vendor/laravel/framework/src/Illuminate/Http/Response.php:34
+28 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:939
+29 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:906
+30 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:821
+31 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:180
+32 - app/Http/Middleware/ValidateSessionTenant.php:64
+33 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+34 - app/Http/Middleware/EnforceTenantContext.php:50
+35 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+36 - app/Http/Middleware/IdentifyTenant.php:46
+37 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+38 - vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php:50
+39 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+40 - vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php:63
+41 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+42 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/VerifyCsrfToken.php:87
+43 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+44 - vendor/laravel/framework/src/Illuminate/View/Middleware/ShareErrorsFromSession.php:48
+45 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+46 - vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php:120
+47 - vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php:63
+48 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+49 - vendor/laravel/framework/src/Illuminate/Cookie/Middleware/AddQueuedCookiesToResponse.php:36
+50 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+51 - vendor/laravel/framework/src/Illuminate/Cookie/Middleware/EncryptCookies.php:74
+52 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+53 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:137
+54 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:821
+55 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:800
+56 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:764
+57 - vendor/laravel/framework/src/Illuminate/Routing/Router.php:753
+58 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php:200
+59 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:180
+60 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php:21
+61 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php:31
+62 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+63 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php:21
+64 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php:51
+65 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+66 - vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php:27
+67 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+68 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php:109
+69 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+70 - vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php:48
+71 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+72 - vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php:58
+73 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+74 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php:22
+75 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+76 - vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php:26
+77 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:219
+78 - vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php:137
+79 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php:175
+80 - vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php:144
+81 - vendor/laravel/framework/src/Illuminate/Foundation/Application.php:1220
+82 - public/index.php:20
+83 - vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php:23
+
+## Request
+
+GET /acs/dashboard
+
+## Headers
+
+* **host**: af033280-2a00-40b8-aa0d-5550f59fd4d2-00-6y2330nmtgv4.janeway.replit.dev
+* **user-agent**: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36
+* **accept**: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+* **accept-encoding**: gzip, deflate, br
+* **accept-language**: it
+* **cache-control**: max-age=0
+* **cookie**: XSRF-TOKEN=eyJpdiI6Im41MUY3M2RXalZ0V2ZNbFlhbXhtWlE9PSIsInZhbHVlIjoiemhUdmtrbzVmTG5pZHVEQ3FEcm1KUkRyQjFLRmsrUlVpaVlZbUxrQ3RSL1JreGc4MWV5dmltcXUrWTJ5eGRhaVVjMzBteWN1Z3BHa3JsT2lBcEczTkYwN3FIRUhpTVNVbEVmanhyVnVabXlHSjJveTBzRkQ5UERBaExHUy9IV0QiLCJtYWMiOiI2YzI4MmFkZTU3NjhkMDQ0NDQ1NTFkZTNhZTFkNGMwNzEwNDRjMTg4ZTIyZTA3OTI1OTNhOGFlMGI0OWQ0MTAzIiwidGFnIjoiIn0%3D; laravel-session=eyJpdiI6IkYwVHFmTHU4RFlEQ1J5dkN4Zzd2OEE9PSIsInZhbHVlIjoiR1NDa01ZeitKZmpsWTQvUjF3Tm84djJXTFZHd0FDRDVGN1JrR1hRaEhucG9zRXhjK2w3SmFza0dnSGtNTU9RQWxjSTc0MXRXdElZUVpWc2NNSmpCQlhURHlCa0JJODc3REhZUkY4dG1kTlAxWmNMcWxwVTN5azg3OU00UW9ZSGwiLCJtYWMiOiJlZmQzZDgzM2ZiNTQwM2QwNDg1NDhkNzJlMWM0Nzg3MGFlNDRkNDFhNGY3ZDU5ZGRjOGRjYjJlYWU0ODBlNGIwIiwidGFnIjoiIn0%3D
+* **sec-fetch-dest**: document
+* **sec-fetch-mode**: navigate
+* **sec-fetch-site**: none
+* **sec-fetch-user**: ?1
+* **upgrade-insecure-requests**: 1
+* **x-forwarded-for**: 45.148.193.191, 10.83.3.115
+* **x-forwarded-proto**: https
+* **x-replit-user-bio**: 
+* **x-replit-user-id**: 
+* **x-replit-user-name**: 
+* **x-replit-user-profile-image**: 
+* **x-replit-user-roles**: 
+* **x-replit-user-teams**: 
+* **x-replit-user-url**: 
+
+## Route Context
+
+controller: App\Http\Controllers\AcsController@dashboard
+route name: acs.dashboard
+middleware: web, auth, tenant.identify, tenant.enforce, tenant.session
+
+## Route Parameters
+
+No route parameter data available.
+
+## Database Queries
+
+* pgsql - select * from "sessions" where "id" = 'FUn3hQaHat5KFJ3Xw2svg1D070VFi9HubzMX7gHg' limit 1 (259.47 ms)
+* pgsql - select * from "users" where "id" = 1 limit 1 (58.89 ms)
+* pgsql - select * from "tenants" where "id" = 21 and "is_active" = 1 and "tenants"."deleted_at" is null limit 1 (59.72 ms)
+* pgsql - select exists(select * from "roles" inner join "user_role" on "roles"."id" = "user_role"."role_id" where "user_role"."user_id" = 1 and "slug" = 'super-admin') as "exists" (67.1 ms)
+* pgsql - select COUNT(*) as total, COUNT(CASE WHEN status = 'online' THEN 1 END) as online, COUNT(CASE WHEN status = 'offline' THEN 1 END) as offline, COUNT(CASE WHEN status = 'provisioning' THEN 1 END) as provisioning, COUNT(CASE WHEN status = 'error' THEN 1 END) as error, COUNT(CASE WHEN protocol_type = 'tr069' THEN 1 END) as tr069, COUNT(CASE WHEN protocol_type = 'tr369' THEN 1 END) as tr369, COUNT(CASE WHEN protocol_type = 'tr369' AND mtp_type = 'mqtt' THEN 1 END) as tr369_mqtt, COUNT(CASE WHEN protocol_type = 'tr369' AND mtp_type = 'http' THEN 1 END) as tr369_http from "cpe_devices" where "cpe_devices"."deleted_at" is null and "cpe_devices"."tenant_id" = 21 and exists (select * from "users" inner join "user_devices" on "users"."id" = "user_devices"."user_id" where "cpe_devices"."id" = "user_devices"."cpe_device_id" and "users"."id" = 1) limit 1 (59.8 ms)
+* pgsql - select COUNT(*) as total, COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending, COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing, COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed, COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed from "provisioning_tasks" limit 1 (58.55 ms)
+* pgsql - select COUNT(*) as total_deployments, COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as scheduled, COUNT(CASE WHEN status = 'downloading' THEN 1 END) as downloading, COUNT(CASE WHEN status = 'installing' THEN 1 END) as installing, COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed, COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed from "firmware_deployments" limit 1 (58.29 ms)
+* pgsql - select COUNT(*) as total, COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed, COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending, COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed, COUNT(CASE WHEN diagnostic_type = 'IPPing' THEN 1 END) as ping, COUNT(CASE WHEN diagnostic_type = 'TraceRoute' THEN 1 END) as traceroute, COUNT(CASE WHEN diagnostic_type = 'DownloadDiagnostics' THEN 1 END) as download, COUNT(CASE WHEN diagnostic_type = 'UploadDiagnostics' THEN 1 END) as upload from "diagnostic_tests" limit 1 (59.34 ms)
+* pgsql - select count(*) as aggregate from "configuration_profiles" where "is_active" = 1 (58.49 ms)
+* pgsql - select count(*) as aggregate from "firmware_versions" (58.17 ms)
+* pgsql - select count(*) as aggregate from "device_parameters" (58.37 ms)
+* pgsql - select exists(select * from "roles" inner join "user_role" on "roles"."id" = "user_role"."role_id" where "user_role"."user_id" = 1 and "slug" = 'super-admin') as "exists" (58.48 ms)
+* pgsql - select * from "cpe_devices" where "cpe_devices"."deleted_at" is null and "cpe_devices"."tenant_id" = 21 and exists (select * from "users" inner join "user_devices" on "users"."id" = "user_devices"."user_id" where "cpe_devices"."id" = "user_devices"."cpe_device_id" and "users"."id" = 1) order by "last_inform" desc limit 10 (59.04 ms)
+* pgsql - select * from "provisioning_tasks" order by "created_at" desc limit 10 (64.86 ms)
+* pgsql - select * from "router_manufacturers" order by "name" asc (68.9 ms)
