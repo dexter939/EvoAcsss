@@ -10,7 +10,7 @@
                         <div class="row">
                             <div class="col-8">
                                 <div class="numbers">
-                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">Total Tasks</p>
+                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">Task Totali</p>
                                     <h5 class="font-weight-bolder" id="statTotalTasks">0</h5>
                                 </div>
                             </div>
@@ -29,7 +29,7 @@
                         <div class="row">
                             <div class="col-8">
                                 <div class="numbers">
-                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">Completed</p>
+                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">Completati</p>
                                     <h5 class="font-weight-bolder text-success" id="statCompleted">0</h5>
                                 </div>
                             </div>
@@ -48,7 +48,7 @@
                         <div class="row">
                             <div class="col-8">
                                 <div class="numbers">
-                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">Pending</p>
+                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">In Attesa</p>
                                     <h5 class="font-weight-bolder text-warning" id="statPending">0</h5>
                                 </div>
                             </div>
@@ -67,7 +67,7 @@
                         <div class="row">
                             <div class="col-8">
                                 <div class="numbers">
-                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">Failed</p>
+                                    <p class="text-sm mb-0 text-uppercase font-weight-bold">Falliti</p>
                                     <h5 class="font-weight-bolder text-danger" id="statFailed">0</h5>
                                 </div>
                             </div>
@@ -84,35 +84,35 @@
 
         <div class="row mb-4">
             <div class="col-12">
-                <ul class="nav nav-pills mb-3" id="provisioningTabs" role="tablist">
+                <ul class="nav nav-pills mb-3 flex-nowrap overflow-auto" id="provisioningTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="bulk-tab" data-bs-toggle="pill" data-bs-target="#bulk" type="button" role="tab">
-                            <i class="fas fa-layer-group me-2"></i>Bulk Provisioning
+                        <button class="nav-link active text-nowrap" id="bulk-tab" data-bs-toggle="pill" data-bs-target="#bulk" type="button" role="tab">
+                            <i class="fas fa-layer-group me-2"></i>Provisioning Massivo
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="scheduled-tab" data-bs-toggle="pill" data-bs-target="#scheduled" type="button" role="tab">
-                            <i class="fas fa-calendar-alt me-2"></i>Scheduled
+                        <button class="nav-link text-nowrap" id="scheduled-tab" data-bs-toggle="pill" data-bs-target="#scheduled" type="button" role="tab">
+                            <i class="fas fa-calendar-alt me-2"></i>Programmati
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="templates-tab" data-bs-toggle="pill" data-bs-target="#templates" type="button" role="tab">
-                            <i class="fas fa-copy me-2"></i>Templates
+                        <button class="nav-link text-nowrap" id="templates-tab" data-bs-toggle="pill" data-bs-target="#templates" type="button" role="tab">
+                            <i class="fas fa-copy me-2"></i>Template
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="conditions-tab" data-bs-toggle="pill" data-bs-target="#conditions" type="button" role="tab">
-                            <i class="fas fa-code-branch me-2"></i>Conditional Rules
+                        <button class="nav-link text-nowrap" id="conditions-tab" data-bs-toggle="pill" data-bs-target="#conditions" type="button" role="tab">
+                            <i class="fas fa-code-branch me-2"></i>Regole Condizionali
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="history-tab" data-bs-toggle="pill" data-bs-target="#history" type="button" role="tab">
-                            <i class="fas fa-history me-2"></i>History & Rollback
+                        <button class="nav-link text-nowrap" id="history-tab" data-bs-toggle="pill" data-bs-target="#history" type="button" role="tab">
+                            <i class="fas fa-history me-2"></i>Cronologia
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#analytics" type="button" role="tab">
-                            <i class="fas fa-chart-bar me-2"></i>Analytics
+                        <button class="nav-link text-nowrap" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#analytics" type="button" role="tab">
+                            <i class="fas fa-chart-bar me-2"></i>Statistiche
                         </button>
                     </li>
                 </ul>
@@ -127,37 +127,37 @@
                             <div class="card-header pb-0">
                                 <h6>
                                     <i class="fas fa-filter me-2 text-primary"></i>
-                                    Device Selection
+                                    Selezione Dispositivi
                                 </h6>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label class="form-label text-sm">Filter Devices</label>
+                                    <label class="form-label text-sm">Filtra Dispositivi</label>
                                     <select class="form-select form-select-sm" id="deviceFilterType">
-                                        <option value="all">All Devices</option>
-                                        <option value="status">By Status</option>
-                                        <option value="manufacturer">By Manufacturer</option>
-                                        <option value="model">By Model</option>
-                                        <option value="firmware">By Firmware Version</option>
-                                        <option value="service">By Service</option>
-                                        <option value="custom">Custom Query</option>
+                                        <option value="all">Tutti i Dispositivi</option>
+                                        <option value="status">Per Stato</option>
+                                        <option value="manufacturer">Per Produttore</option>
+                                        <option value="model">Per Modello</option>
+                                        <option value="firmware">Per Versione Firmware</option>
+                                        <option value="service">Per Servizio</option>
+                                        <option value="custom">Query Personalizzata</option>
                                     </select>
                                 </div>
                                 
                                 <div id="filterOptions" class="mb-3" style="display: none;"></div>
                                 
                                 <div class="mb-3">
-                                    <label class="form-label text-sm">Available Devices</label>
+                                    <label class="form-label text-sm">Dispositivi Disponibili</label>
                                     <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;" id="deviceList">
                                         <div class="text-center text-muted py-3">
-                                            <i class="fas fa-spinner fa-spin"></i> Loading devices...
+                                            <i class="fas fa-spinner fa-spin"></i> Caricamento dispositivi...
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <div class="alert alert-info text-xs mb-0">
                                     <i class="fas fa-info-circle me-2"></i>
-                                    <span id="selectedCount">0</span> devices selected
+                                    <span id="selectedCount">0</span> dispositivi selezionati
                                 </div>
                             </div>
                         </div>
@@ -168,26 +168,26 @@
                             <div class="card-header pb-0">
                                 <h6>
                                     <i class="fas fa-cog me-2 text-success"></i>
-                                    Configuration to Apply
+                                    Configurazione da Applicare
                                 </h6>
                             </div>
                             <div class="card-body">
                                 <div class="row mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label text-sm">Configuration Source</label>
+                                        <label class="form-label text-sm">Sorgente Configurazione</label>
                                         <select class="form-select form-select-sm" id="configSource">
-                                            <option value="profile">Use Existing Profile</option>
-                                            <option value="template">Use Template</option>
-                                            <option value="custom">Custom Parameters</option>
-                                            <option value="ai">AI-Generated Configuration</option>
+                                            <option value="profile">Usa Profilo Esistente</option>
+                                            <option value="template">Usa Template</option>
+                                            <option value="custom">Parametri Personalizzati</option>
+                                            <option value="ai">Configurazione Generata da AI</option>
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label text-sm">Execution Mode</label>
+                                        <label class="form-label text-sm">Modalita Esecuzione</label>
                                         <select class="form-select form-select-sm" id="executionMode">
-                                            <option value="immediate">Immediate</option>
-                                            <option value="scheduled">Scheduled</option>
-                                            <option value="staged">Staged Rollout</option>
+                                            <option value="immediate">Immediata</option>
+                                            <option value="scheduled">Programmata</option>
+                                            <option value="staged">Rollout Graduale</option>
                                         </select>
                                     </div>
                                 </div>
@@ -195,38 +195,38 @@
                                 <div id="configSourceOptions" class="mb-3"></div>
                                 
                                 <div class="mb-3">
-                                    <label class="form-label text-sm">Pre-flight Checks</label>
+                                    <label class="form-label text-sm">Controlli Pre-Esecuzione</label>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="checkDeviceOnline" checked>
-                                        <label class="form-check-label text-xs">Verify device is online</label>
+                                        <label class="form-check-label text-xs">Verifica dispositivo online</label>
                                     </div>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="checkDataModel" checked>
-                                        <label class="form-check-label text-xs">Validate data model compatibility</label>
+                                        <label class="form-check-label text-xs">Valida compatibilita data model</label>
                                     </div>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="checkBackup">
-                                        <label class="form-check-label text-xs">Backup current configuration</label>
+                                        <label class="form-check-label text-xs">Backup configurazione attuale</label>
                                     </div>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="enableRollback">
-                                        <label class="form-check-label text-xs">Enable automatic rollback on failure</label>
+                                        <label class="form-check-label text-xs">Abilita rollback automatico in caso di errore</label>
                                     </div>
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label class="form-label text-sm">Rollout Strategy (for Staged mode)</label>
+                                    <label class="form-label text-sm">Strategia Rollout (per modalita Graduale)</label>
                                     <div class="row">
                                         <div class="col-md-4">
-                                            <label class="form-label text-xs">Batch Size (%)</label>
+                                            <label class="form-label text-xs">Dimensione Batch (%)</label>
                                             <input type="number" class="form-control form-control-sm" id="batchSize" value="10" min="1" max="100">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label text-xs">Wait Between Batches (min)</label>
+                                            <label class="form-label text-xs">Attesa tra Batch (min)</label>
                                             <input type="number" class="form-control form-control-sm" id="batchDelay" value="5" min="1" max="1440">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label text-xs">Success Threshold (%)</label>
+                                            <label class="form-label text-xs">Soglia Successo (%)</label>
                                             <input type="number" class="form-control form-control-sm" id="successThreshold" value="95" min="50" max="100">
                                         </div>
                                     </div>
@@ -234,10 +234,10 @@
                                 
                                 <div class="d-flex justify-content-end gap-2">
                                     <button class="btn btn-sm btn-outline-secondary" onclick="validateConfiguration()">
-                                        <i class="fas fa-check-circle me-1"></i>Validate
+                                        <i class="fas fa-check-circle me-1"></i>Valida
                                     </button>
                                     <button class="btn btn-sm btn-primary" onclick="executeBulkProvisioning()">
-                                        <i class="fas fa-play me-1"></i>Execute Provisioning
+                                        <i class="fas fa-play me-1"></i>Esegui Provisioning
                                     </button>
                                 </div>
                             </div>
@@ -252,10 +252,10 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <h6>
                                 <i class="fas fa-calendar-check me-2 text-info"></i>
-                                Scheduled Provisioning Tasks
+                                Task di Provisioning Programmati
                             </h6>
                             <button class="btn btn-sm btn-primary" onclick="showScheduleModal()">
-                                <i class="fas fa-plus me-1"></i>Schedule New Task
+                                <i class="fas fa-plus me-1"></i>Programma Nuovo Task
                             </button>
                         </div>
                     </div>
@@ -271,27 +271,27 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <h6>
                                 <i class="fas fa-box me-2 text-warning"></i>
-                                Configuration Templates Library
+                                Libreria Template Configurazione
                             </h6>
                             <button class="btn btn-sm btn-primary" onclick="showCreateTemplateModal()">
-                                <i class="fas fa-plus me-1"></i>Create Template
+                                <i class="fas fa-plus me-1"></i>Crea Template
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-3">
-                                <label class="form-label text-sm">Category</label>
+                                <label class="form-label text-sm">Categoria</label>
                                 <select class="form-select form-select-sm" id="templateCategory" onchange="filterTemplates()">
-                                    <option value="all">All Categories</option>
-                                    <option value="wifi">WiFi Configuration</option>
+                                    <option value="all">Tutte le Categorie</option>
+                                    <option value="wifi">Configurazione WiFi</option>
                                     <option value="voip">VoIP/SIP</option>
-                                    <option value="security">Security & Firewall</option>
-                                    <option value="qos">QoS & Traffic Management</option>
-                                    <option value="wan">WAN Configuration</option>
+                                    <option value="security">Sicurezza & Firewall</option>
+                                    <option value="qos">QoS & Gestione Traffico</option>
+                                    <option value="wan">Configurazione WAN</option>
                                     <option value="lan">LAN & DHCP</option>
-                                    <option value="parental">Parental Control</option>
-                                    <option value="diagnostics">Diagnostics</option>
+                                    <option value="parental">Controllo Parentale</option>
+                                    <option value="diagnostics">Diagnostica</option>
                                 </select>
                             </div>
                         </div>
@@ -306,15 +306,15 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <h6>
                                 <i class="fas fa-sitemap me-2 text-success"></i>
-                                Conditional Provisioning Rules
+                                Regole di Provisioning Condizionale
                             </h6>
                             <button class="btn btn-sm btn-primary" onclick="showCreateRuleModal()">
-                                <i class="fas fa-plus me-1"></i>Create Rule
+                                <i class="fas fa-plus me-1"></i>Crea Regola
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="text-sm text-muted">Define rules to automatically apply configurations based on device characteristics</p>
+                        <p class="text-sm text-muted">Definisci regole per applicare automaticamente configurazioni in base alle caratteristiche del dispositivo</p>
                         <div id="conditionalRulesList"></div>
                     </div>
                 </div>
@@ -325,14 +325,14 @@
                     <div class="card-header pb-0">
                         <h6>
                             <i class="fas fa-undo me-2 text-danger"></i>
-                            Configuration History & Rollback
+                            Cronologia Configurazioni & Rollback
                         </h6>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label text-sm">Select Device</label>
+                            <label class="form-label text-sm">Seleziona Dispositivo</label>
                             <select class="form-select form-select-sm" id="historyDeviceSelect" onchange="loadConfigHistory()">
-                                <option value="">Select a device...</option>
+                                <option value="">Seleziona un dispositivo...</option>
                             </select>
                         </div>
                         <div id="configHistoryTimeline"></div>
@@ -345,7 +345,7 @@
                     <div class="col-lg-6 mb-4">
                         <div class="card">
                             <div class="card-header pb-0">
-                                <h6>Provisioning Success Rate (Last 30 Days)</h6>
+                                <h6>Tasso di Successo Provisioning (Ultimi 30 Giorni)</h6>
                             </div>
                             <div class="card-body">
                                 <canvas id="successRateChart" height="200"></canvas>
@@ -355,7 +355,7 @@
                     <div class="col-lg-6 mb-4">
                         <div class="card">
                             <div class="card-header pb-0">
-                                <h6>Top Configuration Templates</h6>
+                                <h6>Template Piu Utilizzati</h6>
                             </div>
                             <div class="card-body">
                                 <canvas id="topTemplatesChart" height="200"></canvas>
@@ -365,7 +365,7 @@
                     <div class="col-lg-12 mb-4">
                         <div class="card">
                             <div class="card-header pb-0">
-                                <h6>Provisioning Tasks Timeline</h6>
+                                <h6>Timeline Task di Provisioning</h6>
                             </div>
                             <div class="card-body">
                                 <canvas id="tasksTimelineChart" height="100"></canvas>
@@ -430,7 +430,7 @@
                 </div>
             `).join('');
             
-            $('#deviceList').html(html || '<p class="text-muted text-center">No devices available</p>');
+            $('#deviceList').html(html || '<p class="text-muted text-center">Nessun dispositivo disponibile</p>');
         }
 
         function updateSelectedCount() {
@@ -459,7 +459,7 @@
                     </select>`;
                     break;
                 case 'manufacturer':
-                    html = '<input type="text" class="form-control form-control-sm" placeholder="Enter manufacturer name" onchange="applyFilter()">';
+                    html = '<input type="text" class="form-control form-control-sm" placeholder="Inserisci nome produttore" onchange="applyFilter()">';
                     break;
             }
             
@@ -473,33 +473,33 @@
             switch(source) {
                 case 'profile':
                     html = `
-                        <label class="form-label text-sm">Select Profile</label>
+                        <label class="form-label text-sm">Seleziona Profilo</label>
                         <select class="form-select form-select-sm" id="selectedProfile">
-                            <option value="">Loading profiles...</option>
+                            <option value="">Caricamento profili...</option>
                         </select>
                     `;
                     loadProfiles();
                     break;
                 case 'template':
                     html = `
-                        <label class="form-label text-sm">Select Template</label>
+                        <label class="form-label text-sm">Seleziona Template</label>
                         <select class="form-select form-select-sm" id="selectedTemplate">
-                            <option value="">Loading templates...</option>
+                            <option value="">Caricamento template...</option>
                         </select>
                     `;
                     break;
                 case 'custom':
                     html = `
-                        <label class="form-label text-sm">Custom Parameters (JSON)</label>
+                        <label class="form-label text-sm">Parametri Personalizzati (JSON)</label>
                         <textarea class="form-control form-control-sm" id="customParameters" rows="5" placeholder='{"parameter.path": "value"}'></textarea>
                     `;
                     break;
                 case 'ai':
                     html = `
-                        <label class="form-label text-sm">AI Configuration Request</label>
-                        <textarea class="form-control form-control-sm" id="aiRequest" rows="3" placeholder="Describe the configuration you want (e.g., 'Configure WiFi 6 with WPA3 security')"></textarea>
+                        <label class="form-label text-sm">Richiesta Configurazione AI</label>
+                        <textarea class="form-control form-control-sm" id="aiRequest" rows="3" placeholder="Descrivi la configurazione desiderata (es. 'Configura WiFi 6 con sicurezza WPA3')"></textarea>
                         <button class="btn btn-sm btn-outline-primary mt-2" onclick="generateAIConfig()">
-                            <i class="fas fa-robot me-1"></i>Generate with AI
+                            <i class="fas fa-robot me-1"></i>Genera con AI
                         </button>
                     `;
                     break;
@@ -514,16 +514,16 @@
                 method: 'GET',
                 success: function(profiles) {
                     const options = profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-                    $('#selectedProfile').html('<option value="">Select a profile...</option>' + options);
+                    $('#selectedProfile').html('<option value="">Seleziona un profilo...</option>' + options);
                 }
             });
         }
 
         function loadTemplates() {
             const templates = [
-                { id: 1, name: 'WiFi 6 Standard', category: 'wifi', description: 'Standard WiFi 6 configuration' },
-                { id: 2, name: 'VoIP Basic Setup', category: 'voip', description: 'Basic VoIP configuration' },
-                { id: 3, name: 'Security Hardening', category: 'security', description: 'Enhanced security settings' },
+                { id: 1, name: 'WiFi 6 Standard', category: 'wifi', description: 'Configurazione WiFi 6 standard' },
+                { id: 2, name: 'VoIP Base', category: 'voip', description: 'Configurazione VoIP base' },
+                { id: 3, name: 'Sicurezza Avanzata', category: 'security', description: 'Impostazioni sicurezza avanzate' },
             ];
             
             renderTemplates(templates);
@@ -539,7 +539,7 @@
                             <span class="badge badge-sm bg-gradient-primary">${t.category}</span>
                             <div class="mt-2">
                                 <button class="btn btn-sm btn-outline-primary" onclick="useTemplate(${t.id})">
-                                    <i class="fas fa-download me-1"></i>Use
+                                    <i class="fas fa-download me-1"></i>Usa
                                 </button>
                             </div>
                         </div>
@@ -552,8 +552,8 @@
 
         function validateConfiguration() {
             Swal.fire({
-                title: 'Validating Configuration',
-                html: 'Running pre-flight checks...',
+                title: 'Validazione Configurazione',
+                html: 'Esecuzione controlli pre-avvio...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -563,8 +563,8 @@
             setTimeout(() => {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Validation Passed',
-                    html: '<ul class="text-start text-sm"><li>All devices are online</li><li>Data model compatibility verified</li><li>No conflicts detected</li></ul>'
+                    title: 'Validazione Superata',
+                    html: '<ul class="text-start text-sm"><li>Tutti i dispositivi sono online</li><li>Compatibilita data model verificata</li><li>Nessun conflitto rilevato</li></ul>'
                 });
             }, 2000);
         }
@@ -573,25 +573,25 @@
             if (selectedDevices.length === 0) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'No Devices Selected',
-                    text: 'Please select at least one device'
+                    title: 'Nessun Dispositivo Selezionato',
+                    text: 'Seleziona almeno un dispositivo'
                 });
                 return;
             }
             
             Swal.fire({
-                title: 'Execute Bulk Provisioning?',
-                html: `Apply configuration to <strong>${selectedDevices.length}</strong> device(s)?`,
+                title: 'Eseguire Provisioning Massivo?',
+                html: `Applicare la configurazione a <strong>${selectedDevices.length}</strong> dispositivo/i?`,
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: 'Execute',
-                cancelButtonText: 'Cancel'
+                confirmButtonText: 'Esegui',
+                cancelButtonText: 'Annulla'
             }).then((result) => {
                 if (result.isConfirmed) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'Provisioning Started',
-                        text: `${selectedDevices.length} tasks queued for execution`
+                        title: 'Provisioning Avviato',
+                        text: `${selectedDevices.length} task accodati per l'esecuzione`
                     });
                 }
             });
@@ -603,9 +603,9 @@
                 new Chart(ctx1, {
                     type: 'line',
                     data: {
-                        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                        labels: ['Sett 1', 'Sett 2', 'Sett 3', 'Sett 4'],
                         datasets: [{
-                            label: 'Success Rate %',
+                            label: 'Tasso Successo %',
                             data: [92, 95, 97, 96],
                             borderColor: 'rgb(75, 192, 192)',
                             tension: 0.1
