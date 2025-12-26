@@ -42,6 +42,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Set tenant_id in session for tenant isolation
+        if (Auth::user()->tenant_id) {
+            session(['tenant_id' => Auth::user()->tenant_id]);
+        }
+
         SecurityLog::logEvent('login_success', [
             'severity' => 'info',
             'ip_address' => $request->ip(),
