@@ -16,7 +16,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ Request::is('acs/dashboard') ? 'active' : '' }}" href="{{ route('acs.dashboard') }}">
                     <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-                        <i class="fas fa-chart-pie text-primary text-sm opacity-60"></i>
+                        <i class="fas fa-home text-primary text-sm opacity-60"></i>
                     </div>
                     <span class="nav-link-text ms-1">Dashboard</span>
                 </a>
@@ -30,7 +30,7 @@
             <li class="nav-item">
                 <a class="nav-link {{ Request::is('acs/devices*') ? 'active' : '' }}" href="{{ route('acs.devices') }}">
                     <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-                        <i class="fas fa-router text-warning text-sm opacity-60"></i>
+                        <i class="fas fa-wifi text-warning text-sm opacity-60"></i>
                     </div>
                     <span class="nav-link-text ms-1">Dispositivi CPE</span>
                 </a>
