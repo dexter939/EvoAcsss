@@ -1,0 +1,55 @@
+root@acstest:/opt/acs# cd /opt/acs && sudo -u acs git pull origin main && sudo systemctl restart acs-worker
+From https://github.com/dexter939/EvoAcsss
+ * branch            main       -> FETCH_HEAD
+Updating c1ed643..eb6247f
+error: Your local changes to the following files would be overwritten by merge:
+        .env.example
+        .replit
+        app/Events/AlarmCreated.php
+        app/Http/Controllers/Api/AuthController.php
+        app/Http/Controllers/Auth/AuthenticatedSessionController.php
+        app/Http/Controllers/SystemUpdateController.php
+        app/Http/Middleware/RateLimitMiddleware.php
+        app/Jobs/ProcessFirmwareDeployment.php
+        app/Jobs/ProcessNetworkScan.php
+        app/Jobs/ProcessProvisioningTask.php
+        app/Jobs/ProvisionStorageService.php
+        app/Jobs/ProvisionVoiceService.php
+        app/Jobs/SendAlertNotificationJob.php
+        app/Jobs/SendTR069Request.php
+        app/Models/Alarm.php
+        app/Models/CpeDevice.php
+        app/Models/SystemVersion.php
+        app/Models/User.php
+        app/Providers/AppServiceProvider.php
+        app/Services/CacheService.php
+        bootstrap/app.php
+        bootstrap/providers.php
+        config/acs.php
+        config/database.php
+        config/logging.php
+        config/session.php
+        data/prosody.pid
+        database/seeders/DatabaseSeeder.php
+        docs/WEBSOCKET_MOBILE_INTEGRATION.md
+        mobile-app/package.json
+        phpunit.xml
+        replit.md
+        resources/views/acs/advanced-monitoring.blade.php
+        resources/views/acs/advanced-provisioning.blade.php
+        resources/views/acs/ai-assistant.blade.php
+        resources/views/acs/network-topology.blade.php
+        resources/views/acs/performance-monitoring.blade.php
+        resources/views/acs/security-dashboard.blade.php
+        resources/views/acs/updates/index.blade.php
+        resources/views/acs/updates/show.blade.php
+        resources/views/layouts/navbars/navbar.blade.php
+        resources/views/layouts/navbars/sidebar.blade.php
+        routes/api.php
+        routes/channels.php
+        routes/console.php
+        routes/web.php
+        tests/TEST_SUITE_SUMMARY.md
+        tests/TestCase.php
+Please commit your changes or stash them before you merge.
+Aborting
